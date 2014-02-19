@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Fix BanniNation
 // @description fixes up various parts of the bn ui
-// @version     14
+// @version     15
 // @downloadURL https://userscripts.org/scripts/source/36110.user.js
 // @updateURL   https://userscripts.org/scripts/source/36110.meta.js
 // @namespace   http://www.bannination.com/fixbn
@@ -31,8 +31,8 @@
 // @resource    magnificcss https://raw.github.com/dimsemenov/Magnific-Popup/master/dist/magnific-popup.css
 // @resource	spectrumcss	https://raw.github.com/bgrins/spectrum/master/spectrum.css
 // ==/UserScript==
-/*jshint  browser: true*/
-/*global $, jQuery, URI, GM_config, GM_addStyle, GM_getResourceText, GM_configStruct, GM_getValue, GM_setValue, noty*/
+/* jshint  browser: true*/
+/* global $, jQuery, URI, GM_config, GM_addStyle, GM_getResourceText, GM_configStruct, GM_getValue, GM_setValue, noty */
 
 var __fixbn = null;
 try {
@@ -354,7 +354,9 @@ try {
 				}).after("<span class='uid'><img title='settings' src='https://cdn1.iconfinder.com/data/icons/hamburg/32/settings.png' style='height:1em; width:1em;' /></span>");
 
 				// add out-of-page quotes to the style
+				/* jshint -W064 */
 				GM_addStyle("div.cb a[href^='/comments/{0}'] { color:black; }".fex(threadId));
+				/* jshint +W064 */
 
 				// add user decoration to userid span
 				$("div.ch span.uid").userDecoration({
@@ -429,14 +431,17 @@ try {
 				});
 
 				// any selective reply child quotes have font tags around them, let's style them
+				/* jshint -W014 */
 				$("div.cb font").filter(function () {
 					var quoteChildren = $(this).contents();
 					return (
-						quoteChildren.length === 3 && quoteChildren[0].tagName === "A" && quoteChildren[2].tagName === "I"
+						(quoteChildren.length === 3 && quoteChildren[0].tagName === "A" && quoteChildren[2].tagName === "I")
 						||
-						quoteChildren.length === 2 && quoteChildren[0].tagName === "A" && quoteChildren[1].tagName === "I"
-						);
+						(quoteChildren.length === 2 && quoteChildren[0].tagName === "A" && quoteChildren[1].tagName === "I")
+					);
+					
 				}).addClass("commentquote");
+				/* jshint +W014 */
 
 				// any selective reply images have been converted to links, let's style them
 				$("div.cb a").filter(function () {
@@ -480,11 +485,13 @@ try {
 
 							previewComment.find("font").filter(function () {
 								var quoteChildren = $(this).contents();
+								/* jshint -W014 */
 								return (
-									quoteChildren.length === 3 && quoteChildren[0].tagName === "A" && quoteChildren[2].tagName === "I"
+									(quoteChildren.length === 3 && quoteChildren[0].tagName === "A" && quoteChildren[2].tagName === "I")
 									||
-									quoteChildren.length === 2 && quoteChildren[0].tagName === "A" && quoteChildren[1].tagName === "I"
+									(quoteChildren.length === 2 && quoteChildren[0].tagName === "A" && quoteChildren[1].tagName === "I")
 									);
+								/* jshint +W014 */
 							}).addClass("commentquote");
 
 							$.magnificPopup.open({
@@ -646,7 +653,7 @@ try {
 					if (notification) {
 						notification.setText(result.html());
 					} else {
-						notification = new noty({ 'timeout': 6000, 'type':'information', 'text': result.html(), callback: { afterClose: function () { notification = null; } } });
+						notification = new noty({ 'timeout': 6000, 'type': 'information', 'text': result.html(), callback: { afterClose: function () { notification = null; } } });
 					}
 				
 				};
@@ -721,6 +728,7 @@ try {
 
 				var quotesToWrap = [];
 				var quoteContents = quote.contents();
+				/* jshint -W014 */
 				quoteContents.each(function (index) {
 					if (this.nodeType !== 3
 						&& this.tagName === "A"
@@ -732,6 +740,7 @@ try {
 						quotesToWrap[quotesToWrap.length] = index;
 					}
 				});
+				/* jshint +W014 */
 				var i;
 				for (i = 0; i < quotesToWrap.length; i++) {
 					var indexOfA = quotesToWrap[i];
@@ -800,7 +809,7 @@ try {
 				}
 
 				return this.configs[username];
-			}
+			};
 
 			// Gets a config when userId might not be known
 			BnConfig.prototype.getConfigAsync = function (uName, userId, callback) {
@@ -832,13 +841,13 @@ try {
 					dataType: "html",
 					beforeSend: $bind(function (jqXHR, settings) {
 						jqXHR.configData = this;
-					}, { 'username': username, 'callback':callback }),
+					}, { 'username': username, 'callback': callback }),
 					success: $bind(function (data, textStatus, jqXHR) {
 						// <h1>The user bleh was not found</h1>
 						// <h1> Profile for artificeren (757)</h1>
 						if (data.indexOf("Profile for") > 0) {
 							//lolregex
-							var result = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)")[1].replace(/\(/g, '').replace(/\)/g, '');
+							var result = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)")[1].replace(/\(/g, '').replace(/\)/g, ''); // jshint ignore:line
 							jqXHR.configData.userId = result;
 							var cd = jqXHR.configData;
 							this.createConfig(cd.username, cd.userId);
@@ -853,18 +862,18 @@ try {
 			BnConfig.prototype.ensureIdStore = function () {
 				if (this.idStore === null) {
 					var idStoreString = GM_config.get("userIdStore");
-					if (idStoreString.length == 0) {
+					if (idStoreString.length === 0) {
 						idStoreString = "{}";
 					}
 					try {
 						this.idStore = JSON.parse(idStoreString);
 					} catch (ex) {
-						console.error("FixbN failed parsing idStore", idStoreString)
+						console.error("FixbN failed parsing idStore", idStoreString);
 						this.idStore = {};
 						GM_config.set("userIdStore", JSON.stringify(this.idStore));
 					}
 				}
-			}
+			};
 
 			BnConfig.prototype.getUserId = function (username) {
 				try {
@@ -1476,7 +1485,7 @@ try {
 						type: "GET",
 						dataType: "text",
 						context: this,
-						beforeSend: $bind(callbackDataPassthru, {'stamp':this.tagSet.stamp, 'tag':tag}),
+						beforeSend: $bind(callbackDataPassthru, {'stamp': this.tagSet.stamp, 'tag': tag}),
 						success: this.tagSubmitSuccess,
 						error: this.tagSubmitError
 					});
@@ -1590,7 +1599,6 @@ try {
 
 })(jQuery);
 
-
 /*
 string format function
 attached to the string prototype
@@ -1661,7 +1669,6 @@ if ("function" !== typeof "".trim) {
 	};
 }
 
-
 /**
 * shrinkTextToFit plugin
 * 
@@ -1716,9 +1723,10 @@ if ("function" !== typeof "".trim) {
 // The kickoff function
 $(document).ready(function () {
 	"use strict";
-	/* jshint ignore:start */
+	
 
 	// general style changes
+	/* jshint -W064 */
 	GM_addStyle((function () {
 		return [
 			"div#selectionMenu { box-shadow:0px 0px 5px black; background:#eeeeee; border:4px solid black; border-radius:5px; padding:5px; padding-left:8px; }",
@@ -1762,7 +1770,7 @@ $(document).ready(function () {
 			"div#menu a.a5{padding-right:25px;background:url(../img/bncombined.png) no-repeat center;background-position:right -648px;}",
 			"div#menu a.a1{padding-right:25px;background:url(../img/bncombined.png) no-repeat top;background-position:right -360px;}"
 		].join('\n') + '\n';
-	})());
+	})()); 
 
 	// gm_config styling
 	GM_addStyle((function () {
@@ -1793,10 +1801,12 @@ $(document).ready(function () {
 			"div[id$='_wrapper'] button[id$='_saveBtn'] { font-weight:bold; }",
 			"div[id$='_wrapper'] button[id$='_closeBtn'] { font-weight:bold; }"
 		].join('\n') + '\n';
-	})());
+	})()); 
+	/* jshint +W064 */
 
 	// add markItUp! style information (including base64 images).
 	// converted by Stephen Cronin
+	/* jshint ignore:start */
 	GM_addStyle((function () {
 		return "\
 .markItUp .miuBold   a { background-image:url(data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAADCSURBVCjPY/jPgB8yUEtBeUL5+ZL/Be+z61PXJ7yPnB8sgGFCcX3m/6z9IFbE/JD/XucxFOTWp/5PBivwr/f77/gfQ0F6ffz/aKACXwG3+27/LeZjKEioj/wffN+n3vW8y3+z/Vh8EVEf/N8LLGEy3+K/2nl5ATQF/vW+/x3BCrQF1P7r/hcvQFPgVg+0GWq0zH/N/wL1aAps6x3+64M9J12g8p//PZcCigKbBJP1uvvV9sv3S/YL7+ft51SgelzghgBKWvx6E5D1XwAAAABJRU5ErkJggg==); } \
@@ -1870,12 +1880,14 @@ $(document).ready(function () {
 .markItUp .palette .col9-3 a { background:#000000; } \
 ";
 	})());
-
 	/* jshint ignore:end */
-
-	GM_addStyle(GM_getResourceText('magnificcss'));
+	
+	/* jshint -W064 */
+	GM_addStyle(GM_getResourceText('magnificcss')); 
 	GM_addStyle(GM_getResourceText('juipepper'));
 	GM_addStyle(GM_getResourceText('spectrumcss'));
+	/* jshint +W064 */
 
 	__fixbn.fix();
 });
+console.info("Fix bN v" + GM_info.version);
