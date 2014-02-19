@@ -431,7 +431,7 @@ try {
 						{ name: 'Ol', openWith: '<ol>\n', closeWith: '</ol>\n', className: 'miuOList' },
 						{ name: 'Li', openWith: '<li>', closeWith: '</li>', className: 'miuListitem' },
 						{ separator: '---------------' },
-						{ name: 'Picture', key: 'P', replaceWith: '<img src="[![Source:!:http://]!]" alt="[![Alternative text]!]" />', className: 'miuImage' },
+						{ name: 'Picture', key: 'P', replaceWith: '<img src="[![Source:!:http://]!]" />', className: 'miuImage' },
 						{ name: 'Link', key: 'L', openWith: '<a href="[![Link:!:http://]!]"(!( title="[![Title]!]")!)>', closeWith: '</a>', placeHolder: 'Your text to link...', className: 'miuLink' },
 						{ separator: '---------------' },
 						{ name: 'Clean', replaceWith: function (markitup) { return markitup.selection.replace(/<(.*?)>/g, ""); }, className: 'miuClean' }
