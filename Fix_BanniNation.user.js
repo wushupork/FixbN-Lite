@@ -91,6 +91,11 @@ try {
 							'type': 'checkbox',
 							'default': true
 						},
+						'nabbitVisibility': {
+							'label': "Enable Nabbit User Images (Can Be Overridden Per-User)",
+							'type': 'checkbox',
+							'default': true
+						},
 						'userIdStore': {
 							'type': 'hidden',
 							'value': '{}'
@@ -292,11 +297,15 @@ try {
 				}
 
 				// store the userid and username in each header data
-				$("div.ch span.uid").each(function () {
-					$(this).closest("div.ch").data("uid", $(this).text());
-				});
-				$("div.ch span.ui").each(function () {
-					$(this).closest("div.ch").data("uname", $(this).text());
+				$("div.ch").each(function () {
+					var header = $(this);
+					header.data("uname", header.find("span.ui").text());
+					var uidSpan = header.find("span.uid");
+					if (uidSpan.length === 0) {
+						header.data("uid", 0);
+					} else {
+						header.data("uid", uidSpan.text());
+					}
 				});
 
 				// clear out tag instructions
@@ -329,6 +338,7 @@ try {
 
 				// nabbit and pretty dates
 				$.fn.nabbit.defaults.userId = function () { return this.closest("div.ch").data("uid"); };
+				$.fn.nabbit.defaults.username = function () { return this.closest("div.ch").data("uname"); };
 
 				$("div.ch span.uid").nabbit({
 					imgSize: 'small',
@@ -355,6 +365,7 @@ try {
 					imgClass: 'nabbitBig',
 					imgTitle: function () { return this.text(); },
 					loaded: function (img) {
+						this.next("span.time").remove();
 						this.after($("<span class='time'></span>").append(img));
 					}
 				});
@@ -940,6 +951,13 @@ try {
 								'options': ['Normal', 'Removed'],
 								'default': 'Normal'
 							},
+							'nabbitVisibility':
+							{
+								'label': 'User Nabbit Image Visibility',
+								'type': 'radio',
+								'options': ['Shown', 'Default', 'Hidden'],
+								'default': 'Default'
+							},
 							'overrideIgnoreReplies':
 							{
 								'label': "Show This User's Replies to Ignored Users",
@@ -1073,7 +1091,6 @@ try {
 		};
 
 		Nabbit.prototype.update = function () {
-
 			var img = null;
 			var imgsrc = "";
 			var title = "";
@@ -1101,6 +1118,23 @@ try {
 				img.attr("alt", title);
 				img.attr("title", title);
 			}
+
+			var globalNabbitVisibility = GM_config.get("nabbitVisibility");
+			var userNabbitVisibility = this.config.get("nabbitVisibility");
+			
+			var visClass = "";
+			switch (userNabbitVisibility) {
+				case "Shown":
+					visClass = "nabbitForceOn";
+					break;
+				case "Hidden":
+					visClass = "nabbitOff";
+					break;
+				case "Default":
+					visClass = globalNabbitVisibility ? "nabbitOn" : "nabbitOff";
+					break;
+			}
+			img.addClass(visClass);
 
 			if ($.type(this.settings.imgClass) === "string" && this.settings.imgClass !== "") {
 				img.addClass(this.settings.imgClass);
@@ -1385,8 +1419,6 @@ try {
 
 				$("div.fbnReplyIgnored").slideDown('fast').removeClass("fbnReplyIgnored");
 				var quoteLinks = $("div.cb:visible a[href^='#'], div.cb:visible a[href^='/comments/{0}']".fex(threadId));
-
-	
 				quoteLinks.each(function () {
 					try {
 						var link = $(this);
@@ -1419,6 +1451,8 @@ try {
 									if (shouldHide) {
 										UserDecoration.prototype.setVisibility("Ignore", header, commentBody);
 										commentBody.addClass("fbnReplyIgnored");
+									} else if ( ownerConfig.get("visibility") !== "Ignore" ) {
+										UserDecoration.prototype.setVisibility("Normal", header, commentBody);
 									}
 								}
 							} catch (ex) {
@@ -1757,6 +1791,8 @@ $(document).ready(function () {
 			"div#footer { color: #CCCCCC; font-size: 0.5em; }",
 			"div#footer a { font-size: 1.5em; }",
 			"div.ch.fbnIgnored img { opacity: 0; }",
+			"div.ch img.nabbitOff { opacity: 0; }",
+			"div.ch img.nabbitForceOn { opacity: 1; }",
 			"div.ch span.peep { display: none; float: left; }",
 			"div.ch.fbnIgnored span.peep { display: inline; float: left; cursor:pointer; font-weight:bold; padding: 0px 0.5em 0px 0.5em; margin: 0.25em 0px 0.5em 0px; }",
 			"div.cb ul, div.cb pre { padding:0px; margin:0px; } div.cb li { padding:0px; margin:0px 0px 0px 1em; }",
