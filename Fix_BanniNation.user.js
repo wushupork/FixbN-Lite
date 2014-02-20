@@ -950,6 +950,13 @@ try {
 								'options': ['Normal', 'Ignore'],
 								'default': 'Normal'
 							},
+							'ignoreReplies':
+							{
+								'label': 'User Being Quoted Visibility',
+								'type': 'radio',
+								'options': ['Shown', 'Default', 'Hidden'],
+								'default': 'Default'
+							},
 							'blockImages':
 							{
 								'label': 'User Comment Image Visibility',
@@ -1440,28 +1447,55 @@ try {
 							// ignoring replies as needed
 							try {
 
-								if (GM_config.get("ignoreReplies")) {
+								var replyVisibile = true;
+								var header = $("div#h" + commentBody.attr("id").substring(1));
+								var commentOwner = header.data("uname");
 
-									var header = $("div#h" + commentBody.attr("id").substring(1));
-									var commentOwner = header.data("uname");
+								// first only bother checking if the quoted user is on ignore at all
+								var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
+								if (quoteIgnore) {
 
-									var ownerConfig = __bnConfig.getConfig(commentOwner, header.data("uid"));
-									if (ownerConfig && ownerConfig.get("overrideIgnoreReplies")) {
-										return;
+									// since they are on Ignore, then determine if they have a reply override on them
+									var gIgnore = GM_config.get("ignoreReplies");
+									var uIgnore = quotedConfig.get("ignoreReplies");
+
+									switch (uIgnore) {
+										case "Shown":
+											quoteIgnore = false;
+											break;
+										case "Hidden":
+											quoteIgnore = true;
+											break;
+										case "Default":
+										default:
+											quoteIgnore = gIgnore;
+											break;
 									}
 
-									var shouldHide = false;
-									if (quotedConfig) {
-										shouldHide = (quotedConfig.get("visibility") === "Ignore");
+									if (quoteIgnore) {
+										//ok, this person is set to be reply-ignored, but prefered user settings can override that
+
+										
+
+										var ownerConfig = __bnConfig.getConfig(commentOwner, header.data("uid"));
+										if (!(ownerConfig && ownerConfig.get("overrideIgnoreReplies"))) {
+
+											// BAM! Ignored Reply!
+											replyVisibile = false;
+
+										}
+
 									}
 
-									if (shouldHide) {
-										UserDecoration.prototype.setVisibility("Ignore", header, commentBody);
-										commentBody.addClass("fbnReplyIgnored");
-									} else if ( ownerConfig.get("visibility") !== "Ignore" ) {
-										UserDecoration.prototype.setVisibility("Normal", header, commentBody);
-									}
 								}
+								
+								if (!replyVisibile) {
+									UserDecoration.prototype.setVisibility("Ignore", header, commentBody);
+									commentBody.addClass("fbnReplyIgnored");
+								} else if (ownerConfig.get("visibility") !== "Ignore") {
+									UserDecoration.prototype.setVisibility("Normal", header, commentBody);
+								}
+
 							} catch (ex) {
 								console.error("FixbN Failed determining quoted user's visibility", ex);
 							}
@@ -1690,150 +1724,154 @@ try {
 })(jQuery);
 
 // bitcoin donate jquery plugin
-(function ($) {
-	"use strict";
+try {
+	(function ($) {
+		"use strict";
 
-	var $bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
-	var root = "https://blockchain.info/";
+		var $bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
+		var root = "https://blockchain.info/";
 
-	var Bitcoin = (function () {
+		var Bitcoin = (function () {
 
-		// @constructor
-		function Bitcoin($el, settings) {
-			if (settings === null) {
-				settings = {};
+			// @constructor
+			function Bitcoin($el, settings) {
+				if (settings === null) {
+					settings = {};
+				}
+
+				this.attach = $bind(this.attach, this);
+
+				this.$el = $el;
+				this.settings = $.extend({}, $.fn.tagn.defaults, settings);
+
+				this.attach();
 			}
 
-			this.attach = $bind(this.attach, this);
+			Bitcoin.prototype.attach = function () {
+				var button = this.$el;
 
-			this.$el = $el;
-			this.settings = $.extend({}, $.fn.tagn.defaults, settings);
+				button.find(".blockchain").hide();
+				button.find('.stage-begin').trigger('show').show();
 
-			this.attach();
-		}
+				button.click(function () {
+					var receivers_address = $(this).data('address');
+					var shared = $(this).data('shared');
+					var test = $(this).data('test');
 
-		Bitcoin.prototype.attach = function () {
-			var button = this.$el;
+					if (!shared) { shared = false; }
 
-			button.find(".blockchain").hide();
-			button.find('.stage-begin').trigger('show').show();
+					var callback_url = $(this).data('callback');
+					if (!callback_url) { callback_url = ''; }
 
-			button.click(function () {
-				var receivers_address = $(this).data('address');
-				var shared = $(this).data('shared');
-				var test = $(this).data('test');
+					button.find('.blockchain').hide();
+					button.find('.stage-loading').trigger('show').show();
 
-				if (!shared) { shared = false; }
+					$.ajax({
+						type: "GET",
+						dataType: 'json',
+						url: root + 'api/receive',
+						data: { method: 'create', address: encodeURIComponent(receivers_address), shared: shared, callback: callback_url },
+						success: function (response) {
+							button.find('.qr-code').empty();
+							button.find('.blockchain').hide();
 
-				var callback_url = $(this).data('callback');
-				if (!callback_url) { callback_url = ''; }
+							if (!response || !response.input_address) {
+								button.find('.stage-error').trigger('show').show().html(button.find('.stage-error').html().replace('[[error]]', 'Unknown Error'));
+								return;
+							}
 
-				button.find('.blockchain').hide();
-				button.find('.stage-loading').trigger('show').show();
+							function checkBalance() {
+								$.ajax({
+									type: "GET",
+									url: root + 'q/getreceivedbyaddress/' + response.input_address,
+									data: { format: 'plain' },
+									success: function (response) {
+										if (!response) { return; }
 
-				$.ajax({
-					type: "GET",
-					dataType: 'json',
-					url: root + 'api/receive',
-					data: { method: 'create', address: encodeURIComponent(receivers_address), shared: shared, callback: callback_url },
-					success: function (response) {
-						button.find('.qr-code').empty();
-						button.find('.blockchain').hide();
+										var value = parseInt(response);
 
-						if (!response || !response.input_address) {
-							button.find('.stage-error').trigger('show').show().html(button.find('.stage-error').html().replace('[[error]]', 'Unknown Error'));
-							return;
-						}
-
-						function checkBalance() {
-							$.ajax({
-								type: "GET",
-								url: root + 'q/getreceivedbyaddress/' + response.input_address,
-								data: { format: 'plain' },
-								success: function (response) {
-									if (!response) { return; }
-
-									var value = parseInt(response);
-
-									if (value > 0 || test) {
-										button.find('.blockchain').hide();
-										button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', value / 100000000));
-									} else {
-										setTimeout(checkBalance, 5000);
-									}
-								}
-							});
-						}
-
-						try {
-							var ws = new WebSocket('ws://ws.blockchain.info/inv');
-							if (!ws) { return; }
-
-							ws.onmessage = function (msg) {
-								try {
-									var obj = $.parseJSON(msg.data);
-									var result = 0;
-
-									if (obj.op == 'utx') {
-										var tx = obj.x;
-																				
-										for (var i = 0; i < tx.out.length; i++) {
-											var output = tx.out[i];
-
-											if (output.addr == response.input_address) {
-												result += parseInt(output.value);
-											}
+										if (value > 0 || test) {
+											button.find('.blockchain').hide();
+											button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', value / 100000000));
+										} else {
+											setTimeout(checkBalance, 5000);
 										}
 									}
+								});
+							}
 
-									button.find('.blockchain').hide();
-									button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', result / 100000000));
+							try {
+								var ws = new WebSocket('ws://ws.blockchain.info/inv');
+								if (!ws) { return; }
 
-									ws.close();
-								} catch (ex) {
-									console.error(ex);
-									console.error(ex.data);
-								}
-							};
+								ws.onmessage = function (msg) {
+									try {
+										var obj = $.parseJSON(msg.data);
+										var result = 0;
 
-							ws.onopen = function () {
-								ws.send('{"op":"addr_sub", "addr":"' + response.input_address + '"}');
-							};
-						} catch (ex) {
-							console.error(ex);
+										if (obj.op == 'utx') {
+											var tx = obj.x;
+																				
+											for (var i = 0; i < tx.out.length; i++) {
+												var output = tx.out[i];
+
+												if (output.addr == response.input_address) {
+													result += parseInt(output.value);
+												}
+											}
+										}
+
+										button.find('.blockchain').hide();
+										button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', result / 100000000));
+
+										ws.close();
+									} catch (ex) {
+										console.error(ex);
+										console.error(ex.data);
+									}
+								};
+
+								ws.onopen = function () {
+									ws.send('{"op":"addr_sub", "addr":"' + response.input_address + '"}');
+								};
+							} catch (ex) {
+								console.error(ex);
+							}
+
+							button.find('.stage-ready').trigger('show').show().html(button.find('.stage-ready').html().replace('[[address]]', response.input_address));
+							button.find('.qr-code').html('<img style="margin:5px" src="' + root + 'qr?data=' + response.input_address + '&size=125">');
+							button.unbind();
+
+							///Check for incoming payment
+							setTimeout(checkBalance, 5000);
+						},
+						error: function (ex) {
+							button.find('.blockchain').hide();
+							button.find('.stage-error').show().trigger('show').html(button.find('.stage-error').html().replace('[[error]]', ex.responseText));
 						}
+					});
 
-						button.find('.stage-ready').trigger('show').show().html(button.find('.stage-ready').html().replace('[[address]]', response.input_address));
-						button.find('.qr-code').html('<img style="margin:5px" src="' + root + 'qr?data=' + response.input_address + '&size=125">');
-						button.unbind();
-
-						///Check for incoming payment
-						setTimeout(checkBalance, 5000);
-					},
-					error: function (ex) {
-						button.find('.blockchain').hide();
-						button.find('.stage-error').show().trigger('show').html(button.find('.stage-error').html().replace('[[error]]', ex.responseText));
-					}
 				});
+			};
 
-			});
-		};
+			return Bitcoin;
+		})();
 
-		return Bitcoin;
-	})();
-
-	$.fn.extend({
-		bitcoin: function (options) {
-			if (options === null) {
-				options = {};
+		$.fn.extend({
+			bitcoin: function (options) {
+				if (options === null) {
+					options = {};
+				}
+				return this.each(function () {
+					return new Bitcoin($(this), options);
+				});
 			}
-			return this.each(function () {
-				return new Bitcoin($(this), options);
-			});
-		}
-	});
+		});
 
-})(jQuery);
+	})(jQuery);
+} catch(ex) {
+	console.error("FixbN Failed declaring bitcoin", ex)
+}
 
 /*
 string format function
