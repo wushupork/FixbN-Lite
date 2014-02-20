@@ -112,6 +112,17 @@ try {
 				GM_config.onOpen = function (doc, win, frame) {
 					var notyDuration = $(frame).find("input[id$='tagNotyDuration']");
 					notyDuration.css("width", "3em");
+
+					var wrapper = $(frame).find("div#FixbNconfig_wrapper");
+					var extras = $("<div style='float:right; text-align:right; font-weight: bold; margin-top:40px; margin-right:10px;'></div>");
+					wrapper.prepend(extras);
+
+					
+					$("<p><a style='font-size:14px; color:black;' href='http://www.bannination.com/comments/5182401/'>Bannination.com Feedback Thread</a></p>").appendTo(extras);
+					$("<p><a style='font-size:14px; color:black;' href='https://github.com/artificeren/FixbN/issues?state=open'>Fix bN GitHub Project Feedback</a></p>").appendTo(extras);
+
+					var bitCoinDonate = $('<div style="font-size:14px;margin:0 auto;width:300px" class="blockchain-btn" data-address="1Fe2d6giUvTMJniufMyivybg6v6HQGpeXG" data-shared="false"> <div class="blockchain stage-begin"><p style="text-decoration:underline;cursor:pointer;"> Donate Bitcoin to Fix bN </p></div> <div class="blockchain stage-loading" style="text-align:center"> <img src="data:image/gif;base64,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"/> </div> <div class="blockchain stage-ready"> <p>Bitcoin Address: <span style="font-size:12px;">[[address]]</span></p> <p class="qr-code"></p> </div> <div class="blockchain stage-paid"> <p>Donation of <b>[[value]] BTC</b> Received. Thank You.</p> </div> <div class="blockchain stage-error"> <font color="red">[[error]]</font> </div> </div>');
+					bitCoinDonate.appendTo(extras).bitcoin();
 				};
 				
 			}
@@ -1669,6 +1680,152 @@ try {
 		beforeSubmit: function () { },
 		tagUpdated: function () { }
 	};
+
+})(jQuery);
+
+// bitcoin donate jquery plugin
+(function ($) {
+	"use strict";
+
+	var $bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
+	var root = "https://blockchain.info/";
+
+	var Bitcoin = (function () {
+
+		// @constructor
+		function Bitcoin($el, settings) {
+			if (settings === null) {
+				settings = {};
+			}
+
+			this.attach = $bind(this.attach, this);
+
+			this.$el = $el;
+			this.settings = $.extend({}, $.fn.tagn.defaults, settings);
+
+			this.attach();
+		}
+
+		Bitcoin.prototype.attach = function () {
+			var button = this.$el;
+
+			button.find(".blockchain").hide();
+			button.find('.stage-begin').trigger('show').show();
+
+			button.click(function () {
+				var receivers_address = $(this).data('address');
+				var shared = $(this).data('shared');
+				var test = $(this).data('test');
+
+				if (!shared) { shared = false; }
+
+				var callback_url = $(this).data('callback');
+				if (!callback_url) { callback_url = ''; }
+
+				button.find('.blockchain').hide();
+				button.find('.stage-loading').trigger('show').show();
+
+				$.ajax({
+					type: "GET",
+					dataType: 'json',
+					url: root + 'api/receive',
+					data: { method: 'create', address: encodeURIComponent(receivers_address), shared: shared, callback: callback_url },
+					success: function (response) {
+						button.find('.qr-code').empty();
+						button.find('.blockchain').hide();
+
+						if (!response || !response.input_address) {
+							button.find('.stage-error').trigger('show').show().html(button.find('.stage-error').html().replace('[[error]]', 'Unknown Error'));
+							return;
+						}
+
+						function checkBalance() {
+							$.ajax({
+								type: "GET",
+								url: root + 'q/getreceivedbyaddress/' + response.input_address,
+								data: { format: 'plain' },
+								success: function (response) {
+									if (!response) { return; }
+
+									var value = parseInt(response);
+
+									if (value > 0 || test) {
+										button.find('.blockchain').hide();
+										button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', value / 100000000));
+									} else {
+										setTimeout(checkBalance, 5000);
+									}
+								}
+							});
+						}
+
+						try {
+							var ws = new WebSocket('ws://ws.blockchain.info/inv');
+							if (!ws) { return; }
+
+							ws.onmessage = function (msg) {
+								try {
+									var obj = $.parseJSON(msg.data);
+									var result = 0;
+
+									if (obj.op == 'utx') {
+										var tx = obj.x;
+																				
+										for (var i = 0; i < tx.out.length; i++) {
+											var output = tx.out[i];
+
+											if (output.addr == response.input_address) {
+												result += parseInt(output.value);
+											}
+										}
+									}
+
+									button.find('.blockchain').hide();
+									button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', result / 100000000));
+
+									ws.close();
+								} catch (ex) {
+									console.error(ex);
+									console.error(ex.data);
+								}
+							};
+
+							ws.onopen = function () {
+								ws.send('{"op":"addr_sub", "addr":"' + response.input_address + '"}');
+							};
+						} catch (ex) {
+							console.error(ex);
+						}
+
+						button.find('.stage-ready').trigger('show').show().html(button.find('.stage-ready').html().replace('[[address]]', response.input_address));
+						button.find('.qr-code').html('<img style="margin:5px" src="' + root + 'qr?data=' + response.input_address + '&size=125">');
+						button.unbind();
+
+						///Check for incoming payment
+						setTimeout(checkBalance, 5000);
+					},
+					error: function (ex) {
+						button.find('.blockchain').hide();
+						button.find('.stage-error').show().trigger('show').html(button.find('.stage-error').html().replace('[[error]]', ex.responseText));
+					}
+				});
+
+			});
+		};
+
+		return Bitcoin;
+	})();
+
+	$.fn.extend({
+		bitcoin: function (options) {
+			if (options === null) {
+				options = {};
+			}
+			return this.each(function () {
+				return new Bitcoin($(this), options);
+			});
+		}
+	});
 
 })(jQuery);
 
