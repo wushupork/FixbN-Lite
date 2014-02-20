@@ -81,6 +81,13 @@ try {
 							'type': 'checkbox',
 							'default': true
 						},
+						'tagNotyDuration': {
+							'label': 'Tag Notification Duration',
+							'type': 'int',
+							'min': 3,
+							'max': 30,
+							'default': 6
+						},
 						'ignoreReplies': {
 							'label': "Ignoring a User Also Ignores All Replies To That User",
 							'type': 'checkbox',
@@ -104,7 +111,11 @@ try {
 					'frame': mainConfigFrame
 				});
 				GM_config.onSave = function () { if (GM_config.isOpen) { GM_config.close(); window.location.reload(); } };
-
+				GM_config.onOpen = function (doc, win, frame) {
+					var notyDuration = $(frame).find("input[id$='tagNotyDuration']");
+					notyDuration.css("width", "3em");
+				};
+				
 			}
 
 			FixbN.prototype.fix = function () {
@@ -206,7 +217,7 @@ try {
 				.append($("div#menu a[href$='/queue']").closest("li"))
 				.append("<li><a href='{0}'>today</a></li>".fex(this.createDateUrl(0)))
 				.append("<li><a href='{0}'>yesterday</a></li>".fex(this.createDateUrl(-1)))
-				.append("<li><a href='{0}' title='Screw You, Dictionary! This Is A Great Word!'>ereyesterday</a>".fex(this.createDateUrl(-2)))
+				.append("<li><a href='{0}' title='Damn You, Dictionary! This Is A Great Word!'>ereyesterday</a>".fex(this.createDateUrl(-2)))
 				.append($("div#menu a[href^='http://wiki']").closest("li"))
 				.append("<li><a href='/comments/1000' class='" + $("div#welcome a[href='/comments/1000']").attr("class") + "'>beer garden</a></li>")
 				.prependTo("div#menu");
@@ -214,6 +225,11 @@ try {
 				if ((new Date()).getHours() < 8 && $("div#menu a:contains('dangerous mode')").length > 0) {
 					leftMenu.append("<li class='nsfw'><a href='/comments/901' class='nsfw'>strip club</a></li>");
 				}
+
+				var selfItem = $("div#menu li:contains('logged in as')");
+				var selfLink = selfItem.find("a");
+				selfLink.remove();
+				selfItem.empty().append(selfLink).append(" ");
 			};
 
 			FixbN.prototype.fixHeadlinesPages = function () {
@@ -672,11 +688,7 @@ try {
 					}
 					result.prepend("<li>{0} tags accepted".fex(accepted.toString()));
 
-					if (notification) {
-						notification.setText(result.html());
-					} else {
-						notification = new noty({ 'timeout': 6000, 'type': 'information', 'text': result.html(), callback: { afterClose: function () { notification = null; } } });
-					}
+					new noty({ 'timeout': GM_config.get("tagNotyDuration") * 1000, 'type': 'information', 'killer': true, 'text': result.html() });
 				
 				};
 			
@@ -1425,7 +1437,6 @@ try {
 						var commentBody = link.closest("div.cb");
 						link.text( link.text().replace("someone who may or may not be", "~"));
 						var userName = link.text();
-						console.log(userName);
 
 						var quotedConfigCallback = function (quotedConfig) {
 
@@ -1919,11 +1930,15 @@ $(document).ready(function () {
 ";
 	})());
 	/* jshint ignore:end */
-	
+
 	/* jshint -W064 */
-	GM_addStyle(GM_getResourceText('magnificcss')); 
-	GM_addStyle(GM_getResourceText('juipepper'));
-	GM_addStyle(GM_getResourceText('spectrumcss'));
+	try {
+		GM_addStyle(GM_getResourceText('magnificcss')); 
+		GM_addStyle(GM_getResourceText('juipepper'));
+		GM_addStyle(GM_getResourceText('spectrumcss'));
+	} catch (ex) {
+		console.error("Fix bN Failed applying css resources", ex);
+	}
 	/* jshint +W064 */
 
 	__fixbn.fix();
