@@ -109,7 +109,7 @@ try {
 
 				try {
 					var firstMenuItem = $("div#menu ul:first li:first");
-					$("<li><span style='text-decoration:underline;cursor:pointer;'>fix bN</span></li>")
+					$("<li><span title='Fix bN Version {0}' style='text-decoration:underline;cursor:pointer;'>fix bN</span></li>".fex(GM_info.version))
 						.insertAfter(firstMenuItem)
 						.click(function () { GM_config.open(); })
 						.attr("title", "Settings for the Fix bN addon");
@@ -201,7 +201,7 @@ try {
 				.append($("div#menu a[href$='/queue']").closest("li"))
 				.append("<li><a href='{0}'>today</a></li>".fex(this.createDateUrl(0)))
 				.append("<li><a href='{0}'>yesterday</a></li>".fex(this.createDateUrl(-1)))
-				.append("<li><a href='{0}'>the day before</a>".fex(this.createDateUrl(-2)))
+				.append("<li><a href='{0}'>ereyesterday</a>".fex(this.createDateUrl(-2)))
 				.append($("div#menu a[href^='http://wiki']").closest("li"))
 				.append("<li><a href='/comments/1000' class='" + $("div#welcome a[href='/comments/1000']").attr("class") + "'>beer garden</a></li>")
 				.prependTo("div#menu");
@@ -815,7 +815,6 @@ try {
 					if (id !== null) {
 						this.createConfig(username, id);
 						this.saveUserId(username, id);
-						callback(this.configs[username]);
 					}
 				}
 
@@ -964,6 +963,47 @@ try {
 						},
 						'frame': userConfigFrame
 					});
+					var openCallbacks = $.Callbacks();
+					openCallbacks.fire.callbacks = openCallbacks;
+					config.onOpen = openCallbacks.fire;
+
+					var saveCallbacks = $.Callbacks();
+					saveCallbacks.fire.callbacks = saveCallbacks;
+					config.onSave = saveCallbacks.fire;
+
+					var closeCallbacks = $.Callbacks();
+					closeCallbacks.fire.callbacks = closeCallbacks;
+					config.onClose = closeCallbacks.fire;
+
+					var resetCallbacks = $.Callbacks();
+					resetCallbacks.fire.callbacks = resetCallbacks;
+					config.onReset = resetCallbacks.fire;
+
+					config.onSave.callbacks.add($bind(function () {
+						if (this.isOpen) {
+							this.close();
+						}
+					}, config));
+
+					config.onOpen.callbacks.add(function (doc, win, frame) {
+						$(frame).find("input[id$='_field_headColor'], input[id$='_field_headBackColor']").spectrum({
+							clickoutFiresChange: true,
+							preferredFormat: "hex6",
+							showInput: true,
+							showButtons: true,
+							allowEmpty: true,
+							showPalette: true,
+							showSelectionPalette: true,
+							palette: [
+								"#EEEEEE",
+								"#807373",
+								"#955050",
+								"#373737"
+							],
+							localStorageKey: "spectrum.fixbn.bannination"
+						});
+
+					});
 
 					this.configs[configKey] = config;
 				}
@@ -996,8 +1036,10 @@ try {
 
 			this.uid = "";
 			this.uname = "";
+			this.config = null;
 
 			this.attach = $bind(this.attach, this);
+			this.update = $bind(this.update, this);
 
 			this.$el = $el;
 			this.settings = $.extend({}, $.fn.nabbit.defaults, settings);
@@ -1022,11 +1064,16 @@ try {
 			__bnConfig.getConfigAsync(this.uname, this.uid, this.attach);
 		}
 
-		Nabbit.prototype.attach = function (config) {
+		Nabbit.prototype.attach = function (userConfig) {
 
-			// find a way to append a function after a function
+			this.config = userConfig;
+			this.config.onSave.callbacks.add(this.update);
 
-			
+			this.update();
+		};
+
+		Nabbit.prototype.update = function () {
+
 			var img = null;
 			var imgsrc = "";
 			var title = "";
@@ -1224,7 +1271,6 @@ try {
 				this.updateAll = $bind(this.updateAll, this);
 				this.update = $bind(this.update, this);
 				this.updateSet = $bind(this.updateSet, this);
-				this.configCreated = $bind(this.configCreated, this);
 
 				this.$el = $el;
 				this.settings = $.extend({}, $.fn.userDecoration.defaults, settings);
@@ -1235,13 +1281,8 @@ try {
 			// attach to element
 			UserDecoration.prototype.attach = function () {
 				var header = this.$el.closest("div.ch");
-				var headerClasses = header.attr("class").split(" ");
-				for (var i = 0; i < headerClasses.length; i++) {
-					if (headerClasses[i].substring(0, 1) === "u") {
-						this.userId = headerClasses[i].substring(1);
-					}
-				}
-				this.userName = header.find("span.ui").text();
+				this.userId = header.data("uid");
+				this.userName = header.data("uname");
 			
 				var peep = $("<span class='peep' >ಠ_ಠ</span>");
 				peep.click( $bind(function () {
@@ -1251,38 +1292,11 @@ try {
 				}, this));
 				header.prepend(peep);
 
-				__bnConfig.getConfigAsync(this.userName, this.userId, this.configCreated);
-			};
-
-			UserDecoration.prototype.configCreated = function (config) {
-
-				this.userConfig = config;
-
-				this.userConfig.onClose = $bind(function () { this.updateAll(); this.cascadeIgnore(this.settings.threadId); }, this);
-				this.userConfig.onSave = $bind(function () {
-					if (this.isOpen) {
-						this.close();
-					}
-				}, this.userConfig);
-				this.userConfig.onOpen = function (doc, win, frame) {
-					$(frame).find("input[id$='_field_headColor'], input[id$='_field_headBackColor']").spectrum({
-						clickoutFiresChange: true,
-						preferredFormat: "hex6",
-						showInput: true,
-						showButtons: true,
-						allowEmpty: true,
-						showPalette: true,
-						showSelectionPalette: true,
-						palette: [
-							"#EEEEEE",
-							"#807373",
-							"#955050",
-							"#373737"
-						],
-						localStorageKey: "spectrum.fixbn.bannination"
-					});
-
-				};
+				this.userConfig = __bnConfig.getConfig(this.userName, this.userId );
+				this.userConfig.onClose.callbacks.add(this.update);
+				if (!this.userConfig.onClose.callbacks.has(this.cascadeIgnore)) {
+					this.userConfig.onClose.callbacks.add(this.cascadeIgnore);
+				}
 
 				this.$el.css("cursor", "pointer").click(this.showUI);
 
@@ -1361,7 +1375,13 @@ try {
 				this.userConfig.open();
 			};
 
-			UserDecoration.prototype.cascadeIgnore = function (threadId) {
+			UserDecoration.prototype.cascadeIgnore = function (commentThreadId) {
+				var threadId;
+				if (typeof commentThreadId === "undefined" || commentThreadId === null) {
+					threadId = $("form input[name='storyid']").val();
+				} else {
+					threadId = commentThreadId;
+				}
 
 				$("div.fbnReplyIgnored").slideDown('fast').removeClass("fbnReplyIgnored");
 				var quoteLinks = $("div.cb:visible a[href^='#'], div.cb:visible a[href^='/comments/{0}']".fex(threadId));
