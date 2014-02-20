@@ -190,6 +190,7 @@ try {
 					};
 					$(window).resize(bindTopMargin);
 					bindTopMargin();
+					window.setTimeout(bindTopMargin, 200);
 
 				} else {
 					$("<style type='text/css'> div#main a:target { padding-top: 50px; margin-top: -50px; } </style>").appendTo('head');
@@ -481,7 +482,12 @@ try {
 						{ name: 'Picture', key: 'P', replaceWith: '<img src="[![Source:!:http://]!]" />', className: 'miuImage' },
 						{ name: 'Link', key: 'L', openWith: '<a href="[![Link:!:http://]!]"(!( title="[![Title]!]")!)>', closeWith: '</a>', placeHolder: 'Your text to link...', className: 'miuLink' },
 						{ separator: '---------------' },
-						{ name: 'Clean', replaceWith: function (markitup) { return markitup.selection.replace(/<(.*?)>/g, ""); }, className: 'miuClean' }
+						{ name: 'Clean', replaceWith: function (markitup) { return markitup.selection.replace(/<(.*?)>/g, ""); }, className: 'miuClean' },
+						{ name: 'Symbols', className: 'miuSymbols', dropMenu: [
+								{ name: 'Tags', openWith: '&lt;', closeWith: '&gt;' },
+								{ name: '&', openWith: '&amp;' }
+							]
+						}
 					]
 					/* jshint ignore:end */
 				});
@@ -1966,7 +1972,7 @@ $(document).ready(function () {
 			"div[id$='_wrapper'] .center { text-align: center; }",
 			"div[id$='_wrapper'] .indent40 { margin-left: 40%; }",
 
-			"div[id$='_wrapper'] .config_header { font-size: 2em; margin: -5px -5px 0px -5px; background-color: #807373; color:white; }",
+			"div[id$='_wrapper'] .config_header { font-size: 2em; margin: -5px -5px 0px -5px; background-color: #807373; color:white; white-space: nowrap;}",
 			"div[id$='_wrapper'] .config_desc, div[id$='_wrapper'] .section_desc, div[id$='_wrapper'] .reset { font-size: 0.75em; }",
 
 			"div[id$='_wrapper'] .config_var { margin: 0.5em; padding: 0.5em; }",
@@ -2006,6 +2012,7 @@ $(document).ready(function () {
 .markItUp .miuLink a { background-image:url(data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAADpSURBVCjPY/jPgB8y0EmBHXdWaeu7ef9rHuaY50jU3J33v/VdVqkdN1SBEZtP18T/L/7f/X/wf+O96kM3f9z9f+T/xP8+XUZsYAWGfsUfrr6L2Ob9J/X/pP+V/1P/e/+J2LbiYfEHQz+ICV1N3yen+3PZf977/9z/Q//X/rf/7M81Ob3pu1EXWIFuZvr7aSVBOx1/uf0PBEK3/46/gnZOK0l/r5sJVqCp6Xu99/2qt+v+T/9f+L8CSK77v+pt73vf65qaYAVqzPYGXvdTvmR/z/4ZHhfunP0p+3vKF6/79gZqzPQLSYoUAABKPQ+kpVV/igAAAABJRU5ErkJggg==); } \
 .markItUp .miuPre a { background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAVklEQVQ4jd2RMRKAMAgE99e2lvwaG3AmQUik0yu55bhM4Jc6mh4AJ6CFr8ak6QpIESDGhCZ++Sl9Dg5stZx5wzyr9aZVgDutyqVtxp+TafVLd0jH+6ouv8Qn9i0hc5QAAAAASUVORK5CYII=); } \
 .markItUp .miuClean a { background-image:url(data:image/gif;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABh0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzT7MfTgAAAhlJREFUOI2lk0toE1EYhc9kZmoeauyAMrZ5NFNsOo1tKm7MooIgKnTlqlkVF0LAlaWLuBG7kGJAV4qu7EYQtSvREkwVxKRWwVhLqKR5OK04Tu0jjQnNY5zJuBptbVqK/Zbnv+e73B8uoWkadoNhV+2tBMdufrX+t6A7NG9lGSrsf7KQ17P+Z8v53gcLb7tD85vEGwTeYYFhGTrMsw2+crGW0/NSuZbzsLSPZeiw52qWqSvoui74jx6xiHwT7ct8k4Vkotijz1KptZ6UJAt8E+3rbLeI7suzfn1GaJqGzqEvDR1u8xLXSO8XVmQlPpk/kb7Dx9ffxAfTx71de9/Z95FURpILU+9/Hpwb8cgGAEgMcfKnD4VARqpWGNpAtXLmUWd/olkvuwdTzZzDOMrQBiorVSsfJ1YDcyMeGQAo/dDsrbZHroszEZvN+Ly91eRT2yxRABwAXDA8THijjxvpxSwUEisB1FoA5e8T1mPzT1vtTlOYYeiOsaDrQKzPEbTYHTf4U+exh/OgPB3B5+i4mksmB868+nV7k+BfXpymsicHQpwp+xoQJwCrFcuUE/FITDj7UuGobdsAyBrhMh52Ab2DfzLqGguyRrRs2MFWqKQmlqbGbJanl1At/0AJQLFAQiXxHdjBXzAzh+7PTL5RpIoJBZLGao5AWiRUDbgL1FliPWJ99itrOSlAqoRTJTVRA+6dG1eGdyzYjt/h2M+sdF20TgAAAABJRU5ErkJggg==); } \
+.markItUp .miuSymbols a { background-image:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAQCAYAAADESFVDAAABWklEQVQokV2RoUsEURDGxxMUBQ2CQdFgMIkeiO2Clttzd2e+mV15GMRmESxmy/ofeEVQi8UsIljMFqOCKBpF8ECvCIJwruEt53IfvPCY35v55ntEhZh5HbAnEXyL2FUQBDNUFoBVwPLyEdFn59xQFxKxS1+QrTAMRwG9BixX1aQM3QKWB0Ew7Ttb5jtiuwsxS1PEWsxrs8xcZbYPwDoAFrqQc26MmatRFM2LWKvwdUC9ajQac4C9e292mmVZJQzdeMlTuiiinwVwSER9ZrYiol8itkn1en1SJHkFLGfWM+dcv++q7WLDXQJw7D0kF865fiKiWq02AugdYHkcxw0C7E1Ef9M0negJuF6MPyLAfgBt9y6SpulUMe6cAH0sglsoQ8zY8D6lSarJnr/YQxRFS865AWaO/uNIlikMw0FAb3o/2D9MTko5yXAcyz5gL4B1VO0ewE6WZRUioj/Jxqav3Wo6lAAAAABJRU5ErkJggg==); } \
 .markItUp * { margin:0px; padding:0px; outline:none; } \
 .markItUp a:link, .markItUp a:visited { color:#000; text-decoration:none; } \
 .markItUp  { width:100% !important; margin:5px 0 5px 0; } \
