@@ -1450,6 +1450,7 @@ try {
 								var replyVisibile = true;
 								var header = $("div#h" + commentBody.attr("id").substring(1));
 								var commentOwner = header.data("uname");
+								var ownerConfig = __bnConfig.getConfig(commentOwner, header.data("uid"));
 
 								// first only bother checking if the quoted user is on ignore at all
 								var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
@@ -1466,7 +1467,6 @@ try {
 										case "Hidden":
 											quoteIgnore = true;
 											break;
-										case "Default":
 										default:
 											quoteIgnore = gIgnore;
 											break;
@@ -1474,10 +1474,7 @@ try {
 
 									if (quoteIgnore) {
 										//ok, this person is set to be reply-ignored, but prefered user settings can override that
-
 										
-
-										var ownerConfig = __bnConfig.getConfig(commentOwner, header.data("uid"));
 										if (!(ownerConfig && ownerConfig.get("overrideIgnoreReplies"))) {
 
 											// BAM! Ignored Reply!
@@ -1492,7 +1489,7 @@ try {
 								if (!replyVisibile) {
 									UserDecoration.prototype.setVisibility("Ignore", header, commentBody);
 									commentBody.addClass("fbnReplyIgnored");
-								} else if (ownerConfig.get("visibility") !== "Ignore") {
+								} else if (!ownerConfig || ownerConfig.get("visibility") !== "Ignore") {
 									UserDecoration.prototype.setVisibility("Normal", header, commentBody);
 								}
 
@@ -1869,8 +1866,8 @@ try {
 		});
 
 	})(jQuery);
-} catch(ex) {
-	console.error("FixbN Failed declaring bitcoin", ex)
+} catch (ex) {
+	console.error("FixbN Failed declaring bitcoin", ex);
 }
 
 /*
