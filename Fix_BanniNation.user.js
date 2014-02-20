@@ -206,7 +206,7 @@ try {
 				.append($("div#menu a[href$='/queue']").closest("li"))
 				.append("<li><a href='{0}'>today</a></li>".fex(this.createDateUrl(0)))
 				.append("<li><a href='{0}'>yesterday</a></li>".fex(this.createDateUrl(-1)))
-				.append("<li><a href='{0}'>ereyesterday</a>".fex(this.createDateUrl(-2)))
+				.append("<li><a href='{0}' title='Screw You, Dictionary! This Is A Great Word!'>ereyesterday</a>".fex(this.createDateUrl(-2)))
 				.append($("div#menu a[href^='http://wiki']").closest("li"))
 				.append("<li><a href='/comments/1000' class='" + $("div#welcome a[href='/comments/1000']").attr("class") + "'>beer garden</a></li>")
 				.prependTo("div#menu");
@@ -1423,7 +1423,9 @@ try {
 					try {
 						var link = $(this);
 						var commentBody = link.closest("div.cb");
+						link.text( link.text().replace("someone who may or may not be", "~"));
 						var userName = link.text();
+						console.log(userName);
 
 						var quotedConfigCallback = function (quotedConfig) {
 
