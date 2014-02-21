@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Fix BanniNation
 // @description fixes up various parts of the bn ui
-// @version     15
+// @version     16
 // @downloadURL https://userscripts.org/scripts/source/36110.user.js
 // @updateURL   https://userscripts.org/scripts/source/36110.meta.js
 // @namespace   http://www.bannination.com/fixbn
@@ -34,6 +34,7 @@
 /* jshint  browser: true*/
 /* global $, jQuery, URI, GM_config, GM_addStyle, GM_getResourceText, GM_configStruct, GM_getValue, GM_setValue, noty */
 
+// main code
 var __fixbn = null;
 try {
 	(function ($) {
@@ -668,36 +669,39 @@ try {
 				var notification = null;
 
 				$.fn.tagn.defaults.beforeSubmit = function (tagSet) {
+					console.info("beforeSubmit", tagSet);
 					var tagInput = $(this);
 					tagInput.val("");
 				};
-
-				$.fn.tagn.defaults.tagUpdated = function (tagSet) {
-
-					var accepted = 0;
-					var result = $("<ul></ul>");
-					for (var i = 0; i < tagSet.tags.length; i++) {
-						var tag = tagSet.tags[i];
-						var status = tagSet.tags[i].status;
-						switch (status) {
-							case "accepted":
-								accepted = Math.max(accepted, parseInt(tag.message));
-								result.append("<li>{0} accepted</li>".fex(tag.value));
-								break;
-							case "matched":
-								result.append("<li>{1} matched</li>".fex(tag.message, tag.value));
-								break;
-							default:
-								result.append("<li>{0} rejected</li>".fex(tag.value));
-								break;
+				$.fn.tagn.defaults.taggingComplete = function (tagSet) {
+					console.info("taggingComplete", tagSet);
+					try {
+						var accepted = 0;
+						var result = $("<ul></ul>");
+						for (var i = 0; i < tagSet.tags.length; i++) {
+							var tag = tagSet.tags[i];
+							var status = tagSet.tags[i].status;
+							switch (status) {
+								case "accepted":
+									accepted = Math.max(accepted, parseInt(tag.message));
+									result.append("<li>{0} accepted</li>".fex(tag.value));
+									break;
+								case "matched":
+									result.append("<li>{1} matched</li>".fex(tag.message, tag.value));
+									break;
+								default:
+									result.append("<li>{0} rejected: {1}</li>".fex(tag.value, tag.message));
+									break;
+							}
 						}
-					}
-					result.prepend("<li>{0} tags accepted".fex(accepted.toString()));
+						result.prepend("<li>{0} total tags accepted for this thread".fex(accepted.toString()));
 
-					new noty({ 'timeout': GM_config.get("tagNotyDuration") * 1000, 'type': 'information', 'killer': true, 'text': result.html() });
-				
+						new noty({ 'timeout': GM_config.get("tagNotyDuration") * 1000, 'type': 'information', 'killer': true, 'text': result.html() });
+					} catch (ex) {
+						console.error("Fix bN Failed to notify of tagging status", ex);
+					}
 				};
-			
+
 				var page = new URI().segment(0);
 
 				// heh, i couldn't disable the other submit handlers, so I just hide and copy that fucker
@@ -793,6 +797,7 @@ try {
 	console.error("FixbN Failed declaring __fixbn", ex);
 }
 
+// user config class
 var __bnConfig = null;
 try {
 	(function ($) {
@@ -1534,7 +1539,7 @@ try {
 	console.error("FixbN Failed declaring UserDecoration", ex);
 }
 
-// taggination replacement
+// bN taggination replacement
 (function ($) {
 	"use strict";
 
@@ -1559,6 +1564,9 @@ try {
 
 			this.attach = $bind(this.attach, this);
 			this.formSubmit = $bind(this.formSubmit, this);
+			this.submitTags = $bind(this.submitTags, this);
+			this.tagSubmitSuccess = $bind(this.tagSubmitSuccess, this);
+			this.tagSubmitError = $bind(this.tagSubmitError, this);
 
 			this.$el = $el;
 			this.settings = $.extend({}, $.fn.tagn.defaults, settings);
@@ -1579,13 +1587,6 @@ try {
 
 		Tagn.prototype.formSubmit = function (evt) {
 			evt.preventDefault();
-			
-			var url = "";
-			if (new URI().segment(0) === "queue") {
-				url = this.settings.queueTagUrl;
-			} else {
-				url = this.settings.articleTagUrl;
-			}
 
 			this.createTagSet(this.$el.val());
 
@@ -1593,27 +1594,59 @@ try {
 				this.settings.beforeSubmit.bind(this.$el)(this.tagSet);
 			}
 
-			var callbackDataPassthru = function (jqXHR, settings) {
-				jqXHR.stamp = this.stamp;
-				jqXHR.tag = this.tag;
-			};
-
-			for (var i = 0; i < this.tagSet.tags.length; i++) {
-				var tag = this.tagSet.tags[i];
-				if (tag.status === "valid") {
-					$.ajax({
-						url: url.fex({ "storyId": this.settings.storyId, "tag": tag.value }),
-						type: "GET",
-						dataType: "text",
-						context: this,
-						beforeSend: $bind(callbackDataPassthru, {'stamp': this.tagSet.stamp, 'tag': tag}),
-						success: this.tagSubmitSuccess,
-						error: this.tagSubmitError
-					});
-				}
-			}
+			this.submitTags().done(function () {
+				this.settings.taggingComplete.bind(this.$el)(this.tagSet);
+			}.bind(this));
 
 			return false;
+		};
+
+		Tagn.prototype.submitTags = function() {
+			try {
+				var url = "";
+				if (new URI().segment(0) === "queue") {
+					url = this.settings.queueTagUrl;
+				} else {
+					url = this.settings.articleTagUrl;
+				}
+
+				url = url.fex({ "storyId": this.settings.storyId });
+				var me = this;
+
+				var promises = [];
+				$.each(this.tagSet.tags, function (index, tag) {
+					var def = new $.Deferred();
+
+					if (tag.status === "valid") {
+
+						// call ajax
+						$.ajax({
+							url: url.fex({ "tag": tag.value }),
+							type: "GET",
+							dataType: "text",
+							context: me,
+							beforeSend: function (jqXHR, settings) {
+								jqXHR.stamp = me.tagSet.stamp;
+								jqXHR.tag = tag;
+							},
+							success: me.tagSubmitSuccess,
+							error: me.tagSubmitError,
+							complete: function (jqXHR, textStatus) {
+								def.resolve();
+							}
+						});
+					} else {
+						$bind(me.settings.tagUpdated, me.$el)(me.tagSet);
+						def.resolve();
+					}
+
+					promises.push(def);
+				});
+			} catch (ex) {
+				console.error("Fix bN Failed sending tags", ex);
+			}
+
+			return $.when.apply(undefined, promises).promise();
 		};
 
 		Tagn.prototype.createTagSet = function (text) {
@@ -1638,6 +1671,7 @@ try {
 					tag.status = "valid";
 				} else {
 					tag.status = "invalid";
+					tag.message = (currentTag.length > 5) ? "Tag too long" : "Tag too short";
 				}
 
 				this.tagSet.tags.push(tag);
@@ -1715,7 +1749,8 @@ try {
 		queueTagUrl: "/post?action=addqueuetag&channel_id=1&story_queue_id={storyId}&tag={tag}",
 
 		beforeSubmit: function () { },
-		tagUpdated: function () { }
+		tagUpdated: function () { },
+		taggingComplete: function () { }
 	};
 
 })(jQuery);
