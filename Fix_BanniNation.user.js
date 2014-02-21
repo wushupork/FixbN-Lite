@@ -229,7 +229,7 @@ try {
 				.append("<li><a href='{0}'>yesterday</a></li>".fex(this.createDateUrl(-1)))
 				.append("<li><a href='{0}' title='Damn You, Dictionary! This Is A Great Word!'>ereyesterday</a>".fex(this.createDateUrl(-2)))
 				.append($("div#menu a[href^='http://wiki']").closest("li"))
-				.append("<li><a href='/comments/1000' class='" + $("div#welcome a[href='/comments/1000']").attr("class") + "'>beer garden</a></li>")
+				.append("<li><a href='/comments/1000' class='fbnBgLink " + $("div#welcome a[href='/comments/1000']").attr("class") + "'>beer garden</a></li>")
 				.prependTo("div#menu");
 
 				if ((new Date()).getHours() < 8 && $("div#menu a:contains('dangerous mode')").length > 0) {
@@ -243,16 +243,15 @@ try {
 			};
 
 			FixbN.prototype.fixHeadlinesPages = function () {
-				var byDate = new URI().segment(0) === "date";
-				var byScore = new URI().segment(0) === "";
-
-				if (byDate || byScore) {
-					// fuck the welcome
-					$("div#welcome").css("display", "none");
+				if (!bnurl.isHeadlinesPage()) {
+					return;
 				}
 
-				if (byDate) {
-					// fix bydate stories
+				// fuck the welcome
+				$("div#welcome").css("display", "none");
+
+				// fix bydate stories
+				if (bnurl.isHeadlinesByDate()) {
 					var stories = $("table#stories tr");
 					if (stories.length) {
 						// the bydate table has an incorrect number of columns in the header
@@ -274,7 +273,8 @@ try {
 
 				}
 
-				if (byScore) { // fix by-score headlines
+				// fix by-score headlines
+				if (bnurl.isHeadlinesByScore()) { 
 
 					// fix up the tag cloud
 					$("div#tag_cloud").css("width", "90%");
@@ -321,13 +321,31 @@ try {
 			};
 
 			FixbN.prototype.fixCommentsPage = function () {
-				if (new URI().segment(0) !== "comments") {
+				if (!bnurl.isCommentsPage()) {
 					return;
 				}
 
 				var threadId = $("form input[name='storyid']").val();
 				if (!threadId) {
 					return;
+				}
+
+				// add calendar to beer garden
+				var beerGardenHeader = $("h1#s1000");
+				if (beerGardenHeader.length > 0) {
+					var bgDatePicker = $("<input type='hidden' id='bgDatePicker' />");
+					bgDatePicker.insertAfter("div#menu a.fbnBgLink").datepicker({
+						showOn: "button",
+						buttonImage: "https://cdn1.iconfinder.com/data/icons/Pretty_office_icon_part_2/16/event.png",
+						buttonImageOnly: true,
+						changeMonth: true,
+						changeYear: true,
+						showAnim: 'fold',
+						onSelect: function (dateText, cal) {
+							var selectedDate = new Date(dateText);
+							window.location.href = "/date/{year}/{month}/{day}/1000".fex({ year: selectedDate.getFullYear(), month: selectedDate.getMonth() + 1, day: selectedDate.getDate() });
+						}
+					});
 				}
 
 				// store the userid and username in each header data
@@ -702,10 +720,8 @@ try {
 					}
 				};
 
-				var page = new URI().segment(0);
-
 				// heh, i couldn't disable the other submit handlers, so I just hide and copy that fucker
-				if (page === "comments") {
+				if (bnurl.isCommentsPage()) {
 					var storyId = $("form input[name='storyid']").val();
 
 					var oldForm = $("form input[id^='tag']").closest("form");
@@ -728,7 +744,7 @@ try {
 					}
 				}
 
-				if (page === "queue") {
+				if (bnurl.isQueuePage()) {
 					$(".storyentry form input[id^='tag']").each(function () {
 						var queueStoryId = this.id.substring(3);
 						var that = $(this);
@@ -1054,6 +1070,58 @@ try {
 } catch (ex) {
 	console.error("FixbN Failed declaring __bnConfig", ex);
 }
+
+var bnurl = (function () {
+
+	var url = new URI();
+
+	function _isHeadlinesPage() {
+		result = (url.path() === "/" || (url.segment().length > 0 && url.segment(0).toLowerCase() === "date" && url.segment().length < 5));
+		console.log("_isHeadlinesPage: " + result + " for " + url.toString());
+		return result;
+	}
+
+	function _isHeadlinesByScore() {
+		result = _isHeadlinesPage && url.path() === "/";
+		console.log("_isHeadlinesByScore: " + result + " for " + url.toString());
+		return result;
+	}
+
+	function _isHeadlinesByDate() {
+		result = _isHeadlinesPage() && url.segment().length > 0 && url.segment(0).toLowerCase() === "date";
+		console.log("_isHeadlinesByDate: " + result + " for " + url.toString());
+		return result;
+	}
+
+	function _isCommentsPage() {
+		//http://www.bannination.com/comments/1000
+		result = url.segment().length > 0 && (url.segment(0).toLowerCase() === "comments" || (url.segment(0).toLowerCase() === "date" && url.segment().length >= 5));
+		console.log("_isCommentsPage: " + result + " for " + url.toString());
+		return result;
+	}
+
+	function _isCommentsPageTagable() {
+		result = _isCommentsPage() && (url.segment(url.segment.length - 1) !== "1000");
+		console.log("_isCommentsPageTagable: " + result + " for " + url.toString());
+		return result;
+	}
+
+	function _isQueuePage() {
+		result = url.segment.length > 0 && url.segment(0).toLowerCase() === "queue";
+		console.log("_isQueuePage: " + result + " for " + url.toString());
+		return result;
+	}
+
+	return {
+		isHeadlinesPage: _isHeadlinesPage,
+		isHeadlinesByScore: _isHeadlinesByScore,
+		isHeadlinesByDate: _isHeadlinesByDate,
+		isCommentsPage: _isCommentsPage,
+		isCommentsPageTagable: _isCommentsPageTagable,
+		isQueuePage: _isQueuePage
+	};
+
+})();
 
 // nabbit jquery plugin
 (function ($) {
@@ -1602,9 +1670,11 @@ try {
 		};
 
 		Tagn.prototype.submitTags = function() {
+			var promises = [];
+
 			try {
 				var url = "";
-				if (new URI().segment(0) === "queue") {
+				if (bnurl.isQueuePage()) {
 					url = this.settings.queueTagUrl;
 				} else {
 					url = this.settings.articleTagUrl;
@@ -1613,7 +1683,6 @@ try {
 				url = url.fex({ "storyId": this.settings.storyId });
 				var me = this;
 
-				var promises = [];
 				$.each(this.tagSet.tags, function (index, tag) {
 					var def = new $.Deferred();
 
