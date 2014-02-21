@@ -334,7 +334,7 @@ try {
 				var beerGardenHeader = $("h1#s1000");
 				if (beerGardenHeader.length > 0) {
 					var bgDatePicker = $("<input type='hidden' id='bgDatePicker' />");
-					bgDatePicker.insertAfter("div#menu a.fbnBgLink").datepicker({
+					bgDatePicker.prependTo("h1#s1000").datepicker({
 						showOn: "button",
 						buttonImage: "https://cdn1.iconfinder.com/data/icons/Pretty_office_icon_part_2/16/event.png",
 						buttonImageOnly: true,
@@ -1071,44 +1071,70 @@ try {
 	console.error("FixbN Failed declaring __bnConfig", ex);
 }
 
+var bnstore = (function () {
+
+	var store = window.localStorage;
+	var prefix = "fixbn_";
+
+	function _get(key) {
+		var serialized = store.getItem(prefix + key);
+		var obj = JSON.parse(serialized);
+		return obj;
+	}
+
+	function _set(key, value) {
+		var serialized = JSON.stringify(value);
+		store.setItem(prefix + key, serialized);
+	}
+
+	function _del(key) {
+		store.removeItem(prefix + key);
+	}
+
+	return {
+		get: _get,
+		set: _set
+	};
+
+})();
+
 var bnurl = (function () {
 
 	var url = new URI();
 
 	function _isHeadlinesPage() {
 		result = (url.path() === "/" || (url.segment().length > 0 && url.segment(0).toLowerCase() === "date" && url.segment().length < 5));
-		console.log("_isHeadlinesPage: " + result + " for " + url.toString());
+		//console.log("_isHeadlinesPage: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isHeadlinesByScore() {
 		result = _isHeadlinesPage && url.path() === "/";
-		console.log("_isHeadlinesByScore: " + result + " for " + url.toString());
+		//console.log("_isHeadlinesByScore: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isHeadlinesByDate() {
 		result = _isHeadlinesPage() && url.segment().length > 0 && url.segment(0).toLowerCase() === "date";
-		console.log("_isHeadlinesByDate: " + result + " for " + url.toString());
+		//console.log("_isHeadlinesByDate: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isCommentsPage() {
-		//http://www.bannination.com/comments/1000
 		result = url.segment().length > 0 && (url.segment(0).toLowerCase() === "comments" || (url.segment(0).toLowerCase() === "date" && url.segment().length >= 5));
-		console.log("_isCommentsPage: " + result + " for " + url.toString());
+		//console.log("_isCommentsPage: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isCommentsPageTagable() {
 		result = _isCommentsPage() && (url.segment(url.segment.length - 1) !== "1000");
-		console.log("_isCommentsPageTagable: " + result + " for " + url.toString());
+		//console.log("_isCommentsPageTagable: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isQueuePage() {
 		result = url.segment.length > 0 && url.segment(0).toLowerCase() === "queue";
-		console.log("_isQueuePage: " + result + " for " + url.toString());
+		//console.log("_isQueuePage: " + result + " for " + url.toString());
 		return result;
 	}
 
@@ -2047,7 +2073,6 @@ if ("function" !== typeof "".trim) {
 // The kickoff function
 $(document).ready(function () {
 	"use strict";
-	
 
 	// general style changes
 	/* jshint -W064 */
@@ -2223,5 +2248,6 @@ $(document).ready(function () {
 	/* jshint +W064 */
 
 	__fixbn.fix();
+
 });
 console.info("Fix bN v" + GM_info.version);
