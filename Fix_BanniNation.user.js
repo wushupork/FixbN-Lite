@@ -1,26 +1,26 @@
 // ==UserScript==
-// @name        Fix BanniNation
-// @description fixes up various parts of the bn ui
-// @version     16
-// @downloadURL https://userscripts.org/scripts/source/36110.user.js
-// @updateURL   https://userscripts.org/scripts/source/36110.meta.js
-// @namespace   http://www.bannination.com/fixbn
-// @include     http://www.bannination.com/*
-// @include     http://bannination.com/*
-// @grant       GM_getValue
-// @grant       GM_setValue
-// @grant       GM_log
-// @grant       GM_addStyle
-// @grant       GM_getResourceText
+// @name		Fix BanniNation
+// @description	fixes up various parts of the bn ui
+// @version		16
+// @downloadURL	https://userscripts.org/scripts/source/36110.user.js
+// @updateURL	https://userscripts.org/scripts/source/36110.meta.js
+// @namespace	http://www.bannination.com/fixbn
+// @include		http://www.bannination.com/*
+// @include		http://bannination.com/*
+// @grant		GM_getValue
+// @grant		GM_setValue
+// @grant		GM_log
+// @grant		GM_addStyle
+// @grant		GM_getResourceText
 
-// @require     https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.11.0.min.js
-// @require     https://ajax.aspnetcdn.com/ajax/jquery.migrate/jquery-migrate-1.2.1.min.js
+// @require		https://ajax.aspnetcdn.com/ajax/jquery/jquery-1.11.0.min.js
+// @require		https://ajax.aspnetcdn.com/ajax/jquery.migrate/jquery-migrate-1.2.1.min.js
 // @require		https://ajax.aspnetcdn.com/ajax/jquery.ui/1.10.3/jquery-ui.min.js
-// @require     https://raw.github.com/markitup/1.x/master/markitup/jquery.markitup.js
-// @require     https://raw.github.com/sizzlemctwizzle/GM_config/master/gm_config.js
-// @require     https://raw.github.com/medialize/URI.js/gh-pages/src/URI.min.js
-// @require     https://raw.github.com/accursoft/caret/master/jquery.caret.js
-// @require     https://raw.github.com/dimsemenov/Magnific-Popup/master/dist/jquery.magnific-popup.js
+// @require		https://raw.github.com/markitup/1.x/master/markitup/jquery.markitup.js
+// @require		https://raw.github.com/sizzlemctwizzle/GM_config/master/gm_config.js
+// @require		https://raw.github.com/medialize/URI.js/gh-pages/src/URI.min.js
+// @require		https://raw.github.com/accursoft/caret/master/jquery.caret.js
+// @require		https://raw.github.com/dimsemenov/Magnific-Popup/master/dist/jquery.magnific-popup.js
 // @require		https://raw.github.com/needim/noty/master/js/noty/packaged/jquery.noty.packaged.min.js
 // @require		https://raw.github.com/bgrins/spectrum/master/spectrum.js
 // @require		https://raw.github.com/ksylvest/jquery-age/master/javascripts/jquery.age.js
@@ -28,7 +28,7 @@
 // @require		https://raw.github.com/silvestreh/onScreen/master/jquery.onscreen.min.js
 
 // @resource	juipepper	https://ajax.aspnetcdn.com/ajax/jquery.ui/1.8.10/themes/pepper-grinder/jquery-ui.css
-// @resource    magnificcss https://raw.github.com/dimsemenov/Magnific-Popup/master/dist/magnific-popup.css
+// @resource	magnificcss https://raw.github.com/dimsemenov/Magnific-Popup/master/dist/magnific-popup.css
 // @resource	spectrumcss	https://raw.github.com/bgrins/spectrum/master/spectrum.css
 // ==/UserScript==
 /* jshint  browser: true*/
