@@ -1071,33 +1071,6 @@ try {
 	console.error("FixbN Failed declaring __bnConfig", ex);
 }
 
-var bnstore = (function () {
-
-	var store = window.localStorage;
-	var prefix = "fixbn_";
-
-	function _get(key) {
-		var serialized = store.getItem(prefix + key);
-		var obj = JSON.parse(serialized);
-		return obj;
-	}
-
-	function _set(key, value) {
-		var serialized = JSON.stringify(value);
-		store.setItem(prefix + key, serialized);
-	}
-
-	function _del(key) {
-		store.removeItem(prefix + key);
-	}
-
-	return {
-		get: _get,
-		set: _set
-	};
-
-})();
-
 var bnurl = (function () {
 
 	var url = new URI();
