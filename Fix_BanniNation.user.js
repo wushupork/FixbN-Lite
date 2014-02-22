@@ -232,10 +232,76 @@ try {
 					leftMenu.append("<li class='nsfw'><a href='/comments/901' class='nsfw'>strip club</a></li>");
 				}
 
-				var selfItem = $("div#menu li:contains('logged in as')");
-				var selfLink = selfItem.find("a");
-				selfLink.remove();
-				selfItem.empty().append(selfLink).append(" ");
+				// consolidate the profile links
+				try {
+					var profilePopup = $("<div class='profilePopup' style='min-width:200px;margin:0px;padding:10px;color:white;position:absolute;display:none;right:0px;background:#373737;z-index:1001;' />");
+					profilePopup.appendTo("body");
+					var selfItem = $("div#menu li:contains('logged in as')");
+					if (selfItem.length !== 0) {
+						var selfLink = selfItem.find("a");
+						selfLink.remove();
+						selfItem.empty().append(selfLink).append(" ");
+
+						var originalLogoutLink = selfLink.closest("li").next("li").find("a");
+						originalLogoutLink.closest("li").hide();
+						var list = selfLink.closest("ul");
+
+						selfLink.click(function (event) {
+							event.preventDefault();
+							try {
+								profilePopup.toggle();
+								if (profilePopup.is(":visible")) {
+									profilePopup.position({
+										my: "right top",
+										at: "right bottom",
+										of: $("div#menu"),
+										collision: "fit"
+									});
+								}
+							} catch (ex) {
+								console.error(ex);
+							}
+						});
+						originalLogoutLink.appendTo(profilePopup);
+						var profileLink = selfLink.clone();
+						profileLink.text("profile");
+						profilePopup.prepend(profileLink);
+
+						profileLink.css("float", "right");
+						originalLogoutLink.css("float", "left");
+
+						var recentCommentWrapper = $("<div class='recentCommentWrapper' style='clear:both;margin-top:5px;' />");
+						recentCommentWrapper.appendTo(profilePopup);
+						$("<span style='text-decoration:underline;cursor:pointer;'>Recent Comments...</span>").click(
+						function (event) {
+							var me = $(this);
+							var userPageUrl = profileLink.attr("href");
+							$.ajax({
+								url: userPageUrl,
+								dataType: "text",
+								success: function (data, textStatus, jqXHR) {
+									var comments = data.substring(data.indexOf("<h2>Recent Comments</h2>"));
+									comments = comments.substring(0, comments.indexOf("<h2>Account Settings</h2>") - 1);
+									recentCommentWrapper.css("overflow-y", "scroll").css("height", $(window).height() - 200);
+									recentCommentWrapper.html(comments);
+									profilePopup.css("width", $("div#menu").width() / 1.5).position({
+										my: "right top",
+										at: "right bottom",
+										of: $("div#menu"),
+										collision: "none"
+									});
+
+								},
+								error: function () {
+									window.location.href = userPageUrl;
+								}
+							});
+
+						}).appendTo(recentCommentWrapper);
+					}
+				} catch (ex) {
+					console.error("FixbN Failed consolidating profile links", ex);
+				}
 
 				// fix the masterbn replies box
 				$("div#replies").hide();
@@ -2599,6 +2665,9 @@ $(document).ready(function () {
 			"div#menu ul.leftMenu { float:left; padding:0px; }",
 			"div#menu ul.leftMenu li { margin:0px; padding:0px 0.5em; border:none; border-right:1px solid white; }",
 			"div#menu ul.leftMenu li:last-child { border:none; }",
+			"div.profilePopup a { color: white; }",
+			"div.recentCommentWrapper { font-size:12px; padding-top:5px; }",
+			"div.recentCommentWrapper a:visited { color:#aaa; }",
 			"div.fbnRepliesToMe { float:left; background:#807373; border: 1px solid black; margin-left:10px; margin-right:10px; margin-bottom:10px; font-size:0.75em; }",
 			"div.fbnRepliesToMe span { color:white; cursor:pointer; padding-left:0.5em; padding-right:0.5em; }",
 			"div.fbnRepliesToMe ul { display: inline; }",
