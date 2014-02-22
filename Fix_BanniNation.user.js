@@ -1052,7 +1052,8 @@ try {
 		}
 
 		return {
-			getConfigPromise: _getConfigPromise
+			getConfigPromise: _getConfigPromise,
+			getCleanUsername: _cleanUsername
 		};
 
 	})(jQuery);
@@ -1505,7 +1506,11 @@ try {
 						link.text(link.text().replace("someone who may or may not be", "~"));
 						var quotedUsername = link.text();
 
-						var quotedConfig = me.childConfigs[quotedUsername];
+						var quotedConfig = me.childConfigs[ __userConfig.getCleanUsername( quotedUsername )];
+						if (typeof quotedConfig === "undefined") {
+							console.error("FixbN Failed acquiring config for quoted user {0} on a comment by {1}".fex(quotedUsername, me.userName));
+							return;
+						}
 
 						// styling quotes
 						link.css({ "background-color": quotedConfig.get("headBackColor"), "color": quotedConfig.get("headColor") });
