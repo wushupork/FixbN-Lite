@@ -814,263 +814,216 @@ try {
 }
 
 // user config class
-var __bnConfig = null;
+var __userConfig = null;
 try {
-	(function ($) {
+	__userConfig = (function ($) {
 		"use strict";
 
-		var BnConfig;
-		var $bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
+		var _configPromiseCache = {};
+		var _idStore = null;
 
-		BnConfig = (function () {
-		
-			// @constructor
-			function BnConfig() {
-				this.configs = {};
-				this.idStore = null;
+		function _getConfigPromise(username, userid) {
+			username = _cleanUsername(username);
 
-				this.getConfig = $bind(this.getConfig, this);
-				this.getConfigAsync = $bind(this.getConfigAsync, this);
-				this.getUserId = $bind(this.getUserId, this);
-				this.saveUserId = $bind(this.saveUserId, this);
-				this.createConfig = $bind(this.createConfig, this);
-				this.ensureIdStore = $bind(this.ensureIdStore, this);
-			}
+			var result = _configPromiseCache[username];
+			if (!result) {
+				var dfd = $.Deferred();
 
-			// Only gets the config if no userId lookup is required
-			BnConfig.prototype.getConfig = function (uName, userId) {
-				var username = (uName.indexOf("~") !== 0 && uName.indexOf("someone who may or may not be") !== 0) ? uName : "~Anonymous";
+				userid = (typeof userid !== "undefined" && userid !== null && !isNaN(userid)) ? userid : _getUserId(username);
 
-				if (!this.configs[username]) {
-
-					var id = null;
-					if (userId !== null && typeof userId !== "undefined" && !isNaN(userId)) {
-						id = userId;
-					} else {
-						id = this.getUserId(username);
-					}
-
-					if (id !== null) {
-						this.createConfig(username, id);
-						this.saveUserId(username, id);
-					}
-				}
-
-				return this.configs[username];
-			};
-
-			BnConfig.prototype.getConfigAsync = function (uName, userId, callback) {
-				/// <summary>Gets a config when userId might not be known</summary>
-				/// <param name='uName' type='String'>The username of the user</param>
-				/// <param name='userId'>The userId of the user</param>
-				/// <param name='callback' type='Function'>The function to call when the config is created</param>
-
-				var username = (uName.indexOf("~") !== 0 && uName.indexOf("someone who may or may not be") !== 0) ? uName : "~Anonymous";
-
-				if (this.configs[username]) {
-					callback(this.configs[username]);
-					return;
-				}
-
-				var id = null;
-				if (userId !== null && typeof userId !== "undefined" && !isNaN(userId)) {
-					id = userId;
+				if (userid !== null) {
+					dfd.resolve(_createConfig(username, userid));
 				} else {
-					id = this.getUserId(username);
-				}
-
-				if (id !== null) {
-					this.createConfig(username, id);
-					this.saveUserId(username, id);
-					callback(this.configs[username]);
-					return;
-				}
-			
-				console.log("FixbN Looking up userId on bannination.com/users/{0}".fex(username));
-				var userPageUrl = "http://www.bannination.com/users/{0}".fex(username);
-				$.ajax({
-					url: userPageUrl,
-					dataType: "html",
-					beforeSend: $bind(function (jqXHR, settings) {
-						jqXHR.configData = this;
-					}, { 'username': username, 'callback': callback }),
-					success: $bind(function (data, textStatus, jqXHR) {
-						// <h1>The user bleh was not found</h1>
-						// <h1> Profile for artificeren (757)</h1>
-						if (data.indexOf("Profile for") > 0) {
-							//lolregex
-							var result = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)")[1].replace(/\(/g, '').replace(/\)/g, ''); // jshint ignore:line
-							jqXHR.configData.userId = result;
-							var cd = jqXHR.configData;
-							this.createConfig(cd.username, cd.userId);
-							this.saveUserId(cd.username, cd.userId);
-							cd.callback(this.configs[cd.username]);
-						}
-					}, this)
-				});
-
-			};
-
-			BnConfig.prototype.ensureIdStore = function () {
-				if (this.idStore === null) {
-					var idStoreString = GM_config.get("userIdStore");
-					if (idStoreString.length === 0) {
-						idStoreString = "{}";
-					}
-					try {
-						this.idStore = JSON.parse(idStoreString);
-					} catch (ex) {
-						console.error("FixbN failed parsing idStore", idStoreString);
-						this.idStore = {};
-						GM_config.set("userIdStore", JSON.stringify(this.idStore));
-					}
-				}
-			};
-
-			BnConfig.prototype.getUserId = function (username) {
-				try {
-					this.ensureIdStore();
-					if (this.idStore[username]) {
-						return this.idStore[username];
-					}
-				} catch (ex) {
-					console.error("FixbN Failed getting userId from local storage", ex);
-				}
-				return null;
-			};
-
-			BnConfig.prototype.saveUserId = function (username, userId) {
-				try {
-					this.ensureIdStore();
-					this.idStore[username] = userId;
-					GM_config.set("userIdStore", JSON.stringify(this.idStore));
-					GM_config.save();
-				} catch (ex) {
-					console.error("FixbN Failed saving userId to local storage", ex);
-				}
-			};
-
-			BnConfig.prototype.createConfig = function (username, userId) {
-
-				var configId = 'FixbNUser' + userId;
-				var configKey = username;
-				if (!(this.configs[configKey])) {
-
-					var userConfigFrame = $("<div style='display:none;' />")[0];
-					document.body.appendChild(userConfigFrame);
-					var config = new GM_configStruct();
-					config.init({
-						'id': configId,
-						'title': 'Fix bN Settings for User: {0}'.fex(configKey),
-						'fields':
-						{
-							'visibility':
-							{
-								'label': 'User Comment Visibility',
-								'type': 'radio',
-								'options': ['Normal', 'Ignore'],
-								'default': 'Normal'
-							},
-							'ignoreReplies':
-							{
-								'label': 'User Being Quoted Visibility',
-								'type': 'radio',
-								'options': ['Shown', 'Default', 'Hidden'],
-								'default': 'Default'
-							},
-							'blockImages':
-							{
-								'label': 'User Comment Image Visibility',
-								'type': 'radio',
-								'options': ['Normal', 'Removed'],
-								'default': 'Normal'
-							},
-							'nabbitVisibility':
-							{
-								'label': 'User Nabbit Image Visibility',
-								'type': 'radio',
-								'options': ['Shown', 'Default', 'Hidden'],
-								'default': 'Default'
-							},
-							'overrideIgnoreReplies':
-							{
-								'label': "Show This User's Replies to Ignored Users",
-								'type': 'checkbox',
-								'default': false
-							},
-							'headColor':
-							{
-								'label': 'Comment Header Font Color',
-								'type': 'text',
-								'size': 25,
-								'default': ''
-							},
-							'headBackColor':
-							{
-								'label': 'Comment Header Background Color',
-								'type': 'text',
-								'size': 25,
-								'default': ''
+					// get userid from ajax
+					console.log("FixbN Looking up userId on bannination.com/users/{0}".fex(username));
+					var userPageUrl = "http://www.bannination.com/users/{0}".fex(username);
+					$.ajax({
+						url: userPageUrl,
+						dataType: "html",
+						success: function (data, textStatus, jqXHR) {
+							// <h1>The user bleh was not found</h1>
+							// <h1> Profile for artificeren (757)</h1>
+							if (data.indexOf("Profile for") > 0) {
+								//lolregex
+								var result = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)")[1].replace(/\(/g, '').replace(/\)/g, ''); // jshint ignore:line
+								_saveUserId(username, result);
+								dfd.resolve(_createConfig(username, result));
 							}
 						},
-						'frame': userConfigFrame
-					});
-					var openCallbacks = $.Callbacks();
-					openCallbacks.fire.callbacks = openCallbacks;
-					config.onOpen = openCallbacks.fire;
-
-					var saveCallbacks = $.Callbacks();
-					saveCallbacks.fire.callbacks = saveCallbacks;
-					config.onSave = saveCallbacks.fire;
-
-					var closeCallbacks = $.Callbacks();
-					closeCallbacks.fire.callbacks = closeCallbacks;
-					config.onClose = closeCallbacks.fire;
-
-					var resetCallbacks = $.Callbacks();
-					resetCallbacks.fire.callbacks = resetCallbacks;
-					config.onReset = resetCallbacks.fire;
-
-					config.onSave.callbacks.add($bind(function () {
-						if (this.isOpen) {
-							this.close();
+						fail: function () {
+							dfd.reject();
 						}
-					}, config));
-
-					config.onOpen.callbacks.add(function (doc, win, frame) {
-						$(frame).find("input[id$='_field_headColor'], input[id$='_field_headBackColor']").spectrum({
-							clickoutFiresChange: true,
-							preferredFormat: "hex6",
-							showInput: true,
-							showButtons: true,
-							allowEmpty: true,
-							showPalette: true,
-							showSelectionPalette: true,
-							palette: [
-								"#EEEEEE",
-								"#807373",
-								"#955050",
-								"#373737"
-							],
-							localStorageKey: "spectrum.fixbn.bannination"
-						});
-
 					});
 
-					this.configs[configKey] = config;
 				}
-				return this.configs[configKey];
-			};
-		
-			return BnConfig;
-		})();
 
-		__bnConfig = new BnConfig();
+				_configPromiseCache[username] = dfd.promise();
+			}
+			return _configPromiseCache[username];
+		}
+
+		function _cleanUsername(username) {
+			return (username.indexOf("~") !== 0 && username.indexOf("someone who may or may not be") !== 0) ? username : "~Anonymous";
+		}
+
+		function _createConfig(username, userId) {
+			var configId = 'FixbNUser' + userId;
+			var configKey = username;
+
+			var userConfigFrame = $("<div style='display:none;' />")[0];
+			document.body.appendChild(userConfigFrame);
+			var config = new GM_configStruct();
+			config.init({
+				'id': configId,
+				'title': 'Fix bN Settings for User: {0}'.fex(configKey),
+				'fields':
+				{
+					'visibility':
+					{
+						'label': 'User Comment Visibility',
+						'type': 'radio',
+						'options': ['Normal', 'Ignore'],
+						'default': 'Normal'
+					},
+					'ignoreReplies':
+					{
+						'label': 'User Being Quoted Visibility',
+						'type': 'radio',
+						'options': ['Shown', 'Default', 'Hidden'],
+						'default': 'Default'
+					},
+					'blockImages':
+					{
+						'label': 'User Comment Image Visibility',
+						'type': 'radio',
+						'options': ['Normal', 'Removed'],
+						'default': 'Normal'
+					},
+					'nabbitVisibility':
+					{
+						'label': 'User Nabbit Image Visibility',
+						'type': 'radio',
+						'options': ['Shown', 'Default', 'Hidden'],
+						'default': 'Default'
+					},
+					'overrideIgnoreReplies':
+					{
+						'label': "Show This User's Replies to Ignored Users",
+						'type': 'checkbox',
+						'default': false
+					},
+					'headColor':
+					{
+						'label': 'Comment Header Font Color',
+						'type': 'text',
+						'size': 25,
+						'default': ''
+					},
+					'headBackColor':
+					{
+						'label': 'Comment Header Background Color',
+						'type': 'text',
+						'size': 25,
+						'default': ''
+					}
+				},
+				'frame': userConfigFrame
+			});
+			var openCallbacks = $.Callbacks();
+			openCallbacks.fire.callbacks = openCallbacks;
+			config.onOpen = openCallbacks.fire;
+
+			var saveCallbacks = $.Callbacks();
+			saveCallbacks.fire.callbacks = saveCallbacks;
+			config.onSave = saveCallbacks.fire;
+
+			var closeCallbacks = $.Callbacks();
+			closeCallbacks.fire.callbacks = closeCallbacks;
+			config.onClose = closeCallbacks.fire;
+
+			var resetCallbacks = $.Callbacks();
+			resetCallbacks.fire.callbacks = resetCallbacks;
+			config.onReset = resetCallbacks.fire;
+
+			config.onSave.callbacks.add((function () {
+				if (this.isOpen) {
+					this.close();
+				}
+			}).bind(config));
+
+			config.onOpen.callbacks.add(function (doc, win, frame) {
+				$(frame).find("input[id$='_field_headColor'], input[id$='_field_headBackColor']").spectrum({
+					clickoutFiresChange: true,
+					preferredFormat: "hex6",
+					showInput: true,
+					showButtons: true,
+					allowEmpty: true,
+					showPalette: true,
+					showSelectionPalette: true,
+					palette: [
+						"#EEEEEE",
+						"#807373",
+						"#955050",
+						"#373737"
+					],
+					localStorageKey: "spectrum.fixbn.bannination"
+				});
+
+			});
+
+			return config;
+		}
+
+		function _ensureIdStore() {
+			if (_idStore === null) {
+				var idStoreString = GM_config.get("userIdStore");
+				if (idStoreString.length === 0) {
+					idStoreString = "{}";
+				}
+				try {
+					_idStore = JSON.parse(idStoreString);
+				} catch (ex) {
+					console.error("FixbN failed parsing idStore", idStoreString);
+					_idStore = {};
+					GM_config.set("userIdStore", JSON.stringify(_idStore));
+				}
+			}
+		}
+
+		function _getUserId(username) {
+			console.log("Fix bN userConfig looking for {0}'s id in store".fex(username));
+			try {
+				_ensureIdStore();
+				if (_idStore[username]) {
+					return _idStore[username];
+				}
+			} catch (ex) {
+				console.error("FixbN Failed getting userId from local storage", ex);
+			}
+			return null;
+		}
+
+		function _saveUserId(username, userId) {
+			try {
+				_ensureIdStore();
+				_idStore[username] = userId;
+				GM_config.set("userIdStore", JSON.stringify(_idStore));
+				GM_config.save();
+			} catch (ex) {
+				console.error("FixbN Failed saving userId to local storage", ex);
+			}
+		}
+
+		return {
+			getConfigPromise: _getConfigPromise
+		};
+
 	})(jQuery);
 } catch (ex) {
-	console.error("FixbN Failed declaring __bnConfig", ex);
+	console.error("FixbN Failed declaring __userConfig", ex);
 }
 
+// bannination.com url tests
 var bnurl = (function () {
 
 	var url = new URI();
@@ -1164,7 +1117,7 @@ var bnurl = (function () {
 				}
 			}
 
-			__bnConfig.getConfigAsync(this.uname, this.uid, this.attach);
+			$.when(__userConfig.getConfigPromise(this.uname, this.uid)).then(this.attach);
 		}
 
 		Nabbit.prototype.attach = function (userConfig) {
@@ -1411,7 +1364,7 @@ try {
 				}, this));
 				header.prepend(peep);
 
-				this.userConfig = __bnConfig.getConfig(this.userName, this.userId );
+				$.when(__userConfig.getConfigPromise(this.userName, this.userId)).then(function (config) { this.userConfig = config; }.bind(this));
 				this.userConfig.onClose.callbacks.add(this.update);
 				if (!this.userConfig.onClose.callbacks.has(this.cascadeIgnore)) {
 					this.userConfig.onClose.callbacks.add(this.cascadeIgnore);
@@ -1511,7 +1464,7 @@ try {
 						link.text( link.text().replace("someone who may or may not be", "~"));
 						var userName = link.text();
 
-						var quotedConfigCallback = function (quotedConfig) {
+						$.when(__userConfig.getConfigPromise(userName, null)).then( function (quotedConfig) {
 
 							// styling quotes
 							link.css({ "background-color": quotedConfig.get("headBackColor"), "color": quotedConfig.get("headColor") });
@@ -1522,7 +1475,9 @@ try {
 								var replyVisibile = true;
 								var header = $("div#h" + commentBody.attr("id").substring(1));
 								var commentOwner = header.data("uname");
-								var ownerConfig = __bnConfig.getConfig(commentOwner, header.data("uid"));
+								
+								var ownerConfig = null;
+								$.when(__userConfig.getConfigPromise(commentOwner, header.data("uid"))).then(function(config){ownerConfig = config;});
 
 								// first only bother checking if the quoted user is on ignore at all
 								var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
@@ -1568,8 +1523,7 @@ try {
 							} catch (ex) {
 								console.error("FixbN Failed determining quoted user's visibility", ex);
 							}
-						};
-						__bnConfig.getConfigAsync(userName, null, quotedConfigCallback);
+						});
 
 					} catch (ex) {
 						console.error(ex);
