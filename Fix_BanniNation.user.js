@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Fix BanniNation
 // @description	fixes up various parts of the bn ui
-// @version		16
+// @version		17
 // @downloadURL	https://userscripts.org/scripts/source/36110.user.js
 // @updateURL	https://userscripts.org/scripts/source/36110.meta.js
 // @namespace	http://www.bannination.com/fixbn
@@ -246,28 +246,24 @@ try {
 					replies.contents().filter(function () {
 						return this.nodeType === 3; //Node.TEXT_NODE
 					}).each(function () {
-						var shouldRemove = false;
+						var words = this;
+						var text = words.nodeValue.trim();
 
-						var text = this.nodeValue.trim();
 						if (text.indexOf("has replied to your comment in thread") > 0) {
 							text = text.substring(0, text.indexOf("has replied to your comment in thread")).trim();
 							$.when(__userConfig.getConfigPromise(text, null)).then(function (config) {
 								if (config.get("visibility") === "Ignore") {
-									shouldRemove = true;
+									var link = words.nextSibling;
+									var quote = link.nextSibling;
+									var brk = quote.nextSibling;
+									$(words).remove();
+									$(link).remove();
+									$(quote).remove();
+									$(brk).remove();
 								}
 							});
 						}
 
-						if (shouldRemove) {
-							var words = this;
-							var link = this.nextSibling;
-							var quote = link.nextSibling;
-							var brk = quote.nextSibling;
-							$(words).remove();
-							$(link).remove();
-							$(quote).remove();
-							$(brk).remove();
-						}
 					});
 					if (replies.children().length > 0) {
 						replies.slideDown();
@@ -362,7 +358,7 @@ try {
 					return;
 				}
 
-				var threadId = $("form input[name='storyid']").val();
+				var threadId = $("h1").first().attr("id").substring(1);
 				if (!threadId) {
 					return;
 				}
@@ -478,9 +474,6 @@ try {
 						$(this).magnificPopup({ type: 'image', verticalFit: true, closeOnContentClick: true, showCloseBtn: false });
 					}
 				});
-
-				// ignore replies to ignored users
-				$.fn.userDecoration.cascadeIgnore(threadId);
 
 				// html comment editor
 				$('textarea').markItUp({
@@ -663,10 +656,14 @@ try {
 
 						switch (event.target.id) {
 							case "selectionMenuQuote":
-								$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
-								var originalComment = $("#comment").val();
-								if (originalComment !== "") { originalComment = originalComment + "\n"; }
-								$("#comment").val(originalComment + cleanHtml + "\n\n").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
+								if ($("#comment").length) {
+									$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
+									var originalComment = $("#comment").val();
+									if (originalComment !== "") { originalComment = originalComment + "\n"; }
+									$("#comment").val(originalComment + cleanHtml + "\n\n").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
+								} else {
+									alert("You must log in to comment");
+								}
 								break;
 							case "selectionMenuTag":
 								if (GM_config.get("stickyTagger")) {
@@ -708,28 +705,31 @@ try {
 				});
 
 				// make sure the standard reply scrolls the comment textarea
-				$("div.reply a").click((function () {
-					//window.setTimeout(function () {
-					try {
-						$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
-						$("#comment").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
-					} catch (ex) {
-						console.error("FixbN failed scroll comment box", ex);
-					}
-					//}, 500);
-				}));
+				if ($("#comment").length) {
+
+					$("div.reply a").click((function () {
+						//window.setTimeout(function () {
+						try {
+							$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
+							$("#comment").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
+						} catch (ex) {
+							console.error("FixbN failed scroll comment box", ex);
+						}
+						//}, 500);
+					}));
+				} else {
+					$("div.reply").hide();
+				}
 			};
 
 			FixbN.prototype.fixTaggers = function () {
 				var notification = null;
 
 				$.fn.tagn.defaults.beforeSubmit = function (tagSet) {
-					console.info("beforeSubmit", tagSet);
 					var tagInput = $(this);
 					tagInput.val("");
 				};
 				$.fn.tagn.defaults.taggingComplete = function (tagSet) {
-					console.info("taggingComplete", tagSet);
 					try {
 						var accepted = 0;
 						var result = $("<ul></ul>");
@@ -822,7 +822,7 @@ try {
 						&& quoteContents[index + 2].tagName === "I"
 						) {
 
-						quotesToWrap[quotesToWrap.length] = index;
+						quotesToWrap.push(index);
 					}
 				});
 				/* jshint +W014 */
@@ -1018,6 +1018,7 @@ try {
 
 			});
 
+			config.bnUsername = username;
 			return config;
 		}
 
@@ -1086,12 +1087,12 @@ var bnurl = (function () {
 	var url = new URI();
 
 	function _isHeadlinesPage() {
-		result = (url.path() === "/" || (url.segment().length > 0 && url.segment(0).toLowerCase() === "date" && url.segment().length < 5));
+		result = (url.path() === "/" || url.path() === "/pages/main/index.vm" || (url.segment().length > 0 && url.segment(0).toLowerCase() === "date" && url.segment().length < 5));
 		return result;
 	}
 
 	function _isHeadlinesByScore() {
-		result = _isHeadlinesPage && url.path() === "/";
+		result = _isHeadlinesPage && ( url.path() === "/" || url.path() === "/pages/main/index.vm" );
 		return result;
 	}
 
@@ -1386,6 +1387,7 @@ try {
 				}
 
 				this.userConfig = null;
+				this.childConfigs = {};
 				this.userId = "0";
 				this.userName = "";
 
@@ -1393,10 +1395,15 @@ try {
 				this.showUI = $bind(this.showUI, this);
 				this.updateAll = $bind(this.updateAll, this);
 				this.update = $bind(this.update, this);
-				this.updateSet = $bind(this.updateSet, this);
+
+				this.onImageReplaced = $.Callbacks();
 
 				this.$el = $el;
 				this.settings = $.extend({}, $.fn.userDecoration.defaults, settings);
+
+				if (typeof this.settings.onImageReplaced === "function") {
+					this.onImageReplaced.add(this.settings.onImageReplaced);
+				}
 
 				this.attach();
 			}
@@ -1406,6 +1413,7 @@ try {
 				var header = this.$el.closest("div.ch");
 				this.userId = header.data("uid");
 				this.userName = header.data("uname");
+				var body = $("div.cb.u" + this.userId + "[id$='" + header.attr("id").substring(1) + "']");
 			
 				var peep = $("<span class='peep' >ಠ_ಠ</span>");
 				peep.click( $bind(function () {
@@ -1415,37 +1423,48 @@ try {
 				}, this));
 				header.prepend(peep);
 
-				$.when(__userConfig.getConfigPromise(this.userName, this.userId)).then(function (config) { this.userConfig = config; }.bind(this));
-				this.userConfig.onClose.callbacks.add(this.update);
-				if (!this.userConfig.onClose.callbacks.has(this.cascadeIgnore)) {
-					this.userConfig.onClose.callbacks.add(this.cascadeIgnore);
-				}
+				var me = this;
 
-				this.$el.css("cursor", "pointer").click(this.showUI);
+				// Get the configs for every quoted user and create a promise array from them
+				var quotedConfigPromises = [];
+				var threadId = $("form input[name='storyid']").val();
+				var quoteLinks = body.find("a[href^='#'], a[href^='/comments/{0}']".fex(threadId));
+				quoteLinks.each(function () {
+					var link = $(this);
+					var quotedUsername = link.text().replace("someone who may or may not be", "~");
+					var quotePromise = __userConfig.getConfigPromise(quotedUsername);
+					quotePromise.done(function (quotedConfig) {
+						me.childConfigs[quotedConfig.bnUsername] = quotedConfig;
+					});
+					quotedConfigPromises.push(quotePromise);
+				});
 
-				this.update();
+				// when I have the main config and then all child configs, 
+				// attach to all of their save events for updating, and then update to current settings
+				$.when(__userConfig.getConfigPromise(me.userName, me.userId))
+					.then(function (config) {
+						$.when.apply(this, quotedConfigPromises).then(function () {
+							me.userConfig = config;
+							me.userConfig.onSave.callbacks.add(me.update);
+							$.each(me.childConfigs, function (index, value) {
+								value.onSave.callbacks.add(me.update);
+							});
+							me.$el.css("cursor", "pointer").click(me.showUI);
+							me.update();
+						});
+					});
+
 			};
 
 			UserDecoration.prototype.update = function () {
 				var header = this.$el.closest("div.ch.u" + this.userId);
 				var body = $("div.cb.u" + this.userId + "[id$='" + header.attr("id").substring(1) + "']");
-				this.updateSet(header, body);
-			};
-
-			UserDecoration.prototype.updateAll = function () {
-				this.updateSet($("div.ch.u" + this.userId), $("div.cb.u" + this.userId));
-			};
-
-			UserDecoration.prototype.updateSet = function (headers, commentBodies) {
-				var visibility = this.userConfig.get("visibility");
-				var replacementCallback = this.settings.onImageReplaced;
-
-				this.setVisibility(visibility, headers, commentBodies);
+				var me = this;
 
 				var blockImages = this.userConfig.get("blockImages");
 				switch (blockImages) {
 					case "Normal":
-						commentBodies.find("a.fbnBlockedImage").replaceWith(function () {
+						body.find("a.fbnBlockedImage").replaceWith(function () {
 							var unblockedImage = $("<img src='" + $(this).attr("href") + "' />");
 							var height = $(this).data("height");
 							var width = $(this).data("width");
@@ -1459,35 +1478,99 @@ try {
 						});
 						break;
 					case "Removed":
-						commentBodies.find("img").replaceWith(function () {
+						body.find("img").replaceWith(function () {
 							var blockedImageLink = $("<a class='fbnBlockedImage' href='" + $(this).attr("src") + "'>[image blocked]</a>");
 							blockedImageLink.data("width", $(this).attr("width"));
 							blockedImageLink.data("height", $(this).attr("height"));
-							replacementCallback.call(blockedImageLink);
+							me.onImageReplaced.fireWith(blockedImageLink, blockedImageLink);
 							return blockedImageLink;
 						});
 						break;
 				}
 
-				headers
+				header
 					.css("background-color", this.userConfig.get("headBackColor"))
 					.css("color", this.userConfig.get("headColor"))
 					.find("a").css("color", this.userConfig.get("headColor"))
 				;
 
-			};
+				// quote style and visibility
+				var visibility = this.userConfig.get("visibility");
 
-			UserDecoration.prototype.setVisibility = function (visibility, headers, commentBodies) {
+				var threadId = $("form input[name='storyid']").val();
+				var quoteLinks = body.find("a[href^='#'], a[href^='/comments/{0}']".fex(threadId));
+				quoteLinks.each(function () {
+					try {
+						var link = $(this);
+						link.text(link.text().replace("someone who may or may not be", "~"));
+						var quotedUsername = link.text();
+
+						var quotedConfig = me.childConfigs[quotedUsername];
+
+						// styling quotes
+						link.css({ "background-color": quotedConfig.get("headBackColor"), "color": quotedConfig.get("headColor") });
+
+						// ignoring replies as needed
+						try {
+
+							var replyVisibile = true;
+
+							// first only bother checking if the quoted user is on ignore at all
+							var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
+							if (quoteIgnore) {
+								
+
+								// since they are on Ignore, then determine if they have a reply override on them
+								var gIgnore = GM_config.get("ignoreReplies");
+								var uIgnore = quotedConfig.get("ignoreReplies");
+
+								switch (uIgnore) {
+									case "Shown":
+										quoteIgnore = false;
+										break;
+									case "Hidden":
+										quoteIgnore = true;
+										break;
+									default:
+										quoteIgnore = gIgnore;
+										break;
+								}
+
+								if (quoteIgnore) {
+									//ok, this person is set to be reply-ignored, but prefered user settings can override that
+
+									if (!(me.userConfig.get("overrideIgnoreReplies"))) {
+
+										// BAM! Ignored Reply!
+										replyVisibile = false;
+
+									}
+
+								}
+
+							}
+							visibility = ( visibility === "Normal" ) && replyVisibile ? "Normal" : "Ignore";
+
+						} catch (ex) {
+							console.error("FixbN Failed determining quoted user's visibility", ex);
+						}
+
+					} catch (ex) {
+						console.error(ex);
+					}
+				});
+
 				switch (visibility) {
 					case 'Normal':
-						commentBodies.filter(".fbnIgnored").slideDown('fast').removeClass("fbnIgnored");
-						headers.removeClass("fbnIgnored");
+						body.filter(".fbnIgnored").slideDown('fast').removeClass("fbnIgnored");
+						header.removeClass("fbnIgnored");
 						break;
 					case 'Ignore':
-						commentBodies.filter(":visible").addClass("fbnIgnored").slideUp('fast');
-						headers.addClass("fbnIgnored");
+						body.filter(":visible").addClass("fbnIgnored").slideUp('fast');
+						header.addClass("fbnIgnored");
 						break;
 				}
+
 			};
 
 			UserDecoration.prototype.showUI = function (evt) {
@@ -1496,92 +1579,6 @@ try {
 				}
 
 				this.userConfig.open();
-			};
-
-			UserDecoration.prototype.cascadeIgnore = function (commentThreadId) {
-				var threadId;
-				if (typeof commentThreadId === "undefined" || commentThreadId === null) {
-					threadId = $("form input[name='storyid']").val();
-				} else {
-					threadId = commentThreadId;
-				}
-
-				$("div.fbnReplyIgnored").slideDown('fast').removeClass("fbnReplyIgnored");
-				var quoteLinks = $("div.cb:visible a[href^='#'], div.cb:visible a[href^='/comments/{0}']".fex(threadId));
-				quoteLinks.each(function () {
-					try {
-						var link = $(this);
-						var commentBody = link.closest("div.cb");
-						link.text( link.text().replace("someone who may or may not be", "~"));
-						var userName = link.text();
-
-						$.when(__userConfig.getConfigPromise(userName, null)).then( function (quotedConfig) {
-
-							// styling quotes
-							link.css({ "background-color": quotedConfig.get("headBackColor"), "color": quotedConfig.get("headColor") });
-
-							// ignoring replies as needed
-							try {
-
-								var replyVisibile = true;
-								var header = $("div#h" + commentBody.attr("id").substring(1));
-								var commentOwner = header.data("uname");
-								
-								var ownerConfig = null;
-								$.when(__userConfig.getConfigPromise(commentOwner, header.data("uid"))).then(function(config){ownerConfig = config;});
-
-								// first only bother checking if the quoted user is on ignore at all
-								var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
-								if (quoteIgnore) {
-
-									// since they are on Ignore, then determine if they have a reply override on them
-									var gIgnore = GM_config.get("ignoreReplies");
-									var uIgnore = quotedConfig.get("ignoreReplies");
-
-									switch (uIgnore) {
-										case "Shown":
-											quoteIgnore = false;
-											break;
-										case "Hidden":
-											quoteIgnore = true;
-											break;
-										default:
-											quoteIgnore = gIgnore;
-											break;
-									}
-
-									if (quoteIgnore) {
-										//ok, this person is set to be reply-ignored, but prefered user settings can override that
-										
-										if (!(ownerConfig && ownerConfig.get("overrideIgnoreReplies"))) {
-
-											// BAM! Ignored Reply!
-											replyVisibile = false;
-
-										}
-
-									}
-
-								}
-								
-								if (!replyVisibile) {
-									UserDecoration.prototype.setVisibility("Ignore", header, commentBody);
-									commentBody.addClass("fbnReplyIgnored");
-								} else if (!ownerConfig || ownerConfig.get("visibility") !== "Ignore") {
-									UserDecoration.prototype.setVisibility("Normal", header, commentBody);
-								}
-
-							} catch (ex) {
-								console.error("FixbN Failed determining quoted user's visibility", ex);
-							}
-						});
-
-					} catch (ex) {
-						console.error(ex);
-					}
-				});
-				
-			
 			};
 
 			return UserDecoration;
@@ -1603,8 +1600,6 @@ try {
 			threadId: 0,
 			onImageReplaced: function () { }
 		};
-
-		$.fn.userDecoration.cascadeIgnore = UserDecoration.prototype.cascadeIgnore;
 
 	})(jQuery);
 } catch (ex) {
@@ -1781,8 +1776,13 @@ try {
 					tag.message = "Too many repeated words";
 					break;
 				default:
-					tag.status = "unknown";
-					tag.message = "unknown response from server";
+					if (data.indexOf("You must be logged in to do that") > 0) {
+						tag.status = "rejected";
+						tag.message = "You must be logged in to do that";
+					} else {
+						tag.status = "unknown";
+						tag.message = "unknown response from server";
+					}
 					break;
 			}
 
