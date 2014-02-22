@@ -236,6 +236,43 @@ try {
 				var selfLink = selfItem.find("a");
 				selfLink.remove();
 				selfItem.empty().append(selfLink).append(" ");
+
+				// fix the masterbn replies box
+				$("div#replies").hide();
+				window.setInterval(function () {
+					var replies = $("div#replies");
+					if (replies.find("a").length > 0) {
+					}
+					replies.contents().filter(function () {
+						return this.nodeType === 3; //Node.TEXT_NODE
+					}).each(function () {
+						var shouldRemove = false;
+
+						var text = this.nodeValue.trim();
+						if (text.indexOf("has replied to your comment in thread") > 0) {
+							text = text.substring(0, text.indexOf("has replied to your comment in thread")).trim();
+							$.when(__userConfig.getConfigPromise(text, null)).then(function (config) {
+								if (config.get("visibility") === "Ignore") {
+									shouldRemove = true;
+								}
+							});
+						}
+
+						if (shouldRemove) {
+							var words = this;
+							var link = this.nextSibling;
+							var quote = link.nextSibling;
+							var brk = quote.nextSibling;
+							$(words).remove();
+							$(link).remove();
+							$(quote).remove();
+							$(brk).remove();
+						}
+					});
+					replies.slideDown();
+					
+				}, 250);
+				
 			};
 
 			FixbN.prototype.fixHeadlinesPages = function () {
@@ -825,30 +862,39 @@ try {
 			if (!result) {
 				var dfd = $.Deferred();
 
-				userid = (typeof userid !== "undefined" && userid !== null && !isNaN(userid)) ? userid : _getUserId(username);
-
-				if (userid !== null) {
+				if (typeof userid !== "undefined" && userid !== null && !isNaN(userid)) {
 					_saveUserId(username, userid);
 					dfd.resolve(_createConfig(username, userid));
 				} else {
-					// get userid from ajax
-					console.log("FixbN Looking up userId on bannination.com/users/{0}".fex(username));
-					var userPageUrl = "http://www.bannination.com/users/{0}".fex(username);
-					$.ajax({
-						url: userPageUrl,
-						dataType: "text",
-						success: function (data, textStatus, jqXHR) {
-							// <h1>The user bleh was not found</h1>
-							// <h1> Profile for artificeren (757)</h1>
-							if (data.indexOf("Profile for") > 0) {
-								//lolregex
-								var result = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)")[1].replace(/\(/g, '').replace(/\)/g, ''); // jshint ignore:line
-								_saveUserId(username, result);
-								dfd.resolve(_createConfig(username, result));
-							}
-						},
-						error: function () {
-							dfd.reject(null);
+					var userIdPromise = _getUserIdPromise(username);
+					userIdPromise.always(function (result, evt) {
+
+						if (typeof result !== "undefined" && result !== null && typeof result.userId !== "undefined") {
+							dfd.resolve(_createConfig(username, result.userId));
+						} else {
+
+							// get userid from ajax
+							console.log("FixbN Looking up userId on bannination.com/users/{0}".fex(username));
+							var userPageUrl = "http://www.bannination.com/users/{0}".fex(username);
+							$.ajax({
+								url: userPageUrl,
+								dataType: "text",
+								success: function (data, textStatus, jqXHR) {
+									// <h1>The user bleh was not found</h1>
+									// <h1> Profile for artificeren (757)</h1>
+									if (data.indexOf("Profile for") > 0) {
+										//lolregex
+										var match = data.match("(?:<h1> Profile for [^\(]* )(.*)(?:</h1>)"); // jshint ignore:line
+										var result = match[1].replace(/\(/g, '').replace(/\)/g, '');
+										_saveUserId(username, result);
+										dfd.resolve(_createConfig(username, result));
+									}
+								},
+								error: function () {
+									console.error("FixbN Error retrieving userid for user {0}".fex(username));
+									dfd.reject(null);
+								}
+							});
 						}
 					});
 
@@ -971,25 +1017,8 @@ try {
 			return config;
 		}
 
-		function _getUserId(username) {
-			//console.log("Fix bN userConfig looking for {0}'s id in store".fex(username));
-			var foundId = null;
-			try {
-				$.when(__fixbndb.idStore().get(username)).then(
-					function (item, evt) {
-						if (typeof item !== "undefined") {
-							//console.log("FixbN Found {0}'s id in the store: {1}".fex(username, item.userId));
-							foundId = item.userId;
-						}
-					},
-					function (error, evt) {
-						console.error("FixbN Error retrieving {0}'s id in the store.".fex(username), error);
-					}
-				);
-			} catch (ex) {
-				console.error("FixbN Failed getting userId from local storage", ex);
-			}
-			return foundId;
+		function _getUserIdPromise(username) {
+			return __fixbndb.idStore().get(username);
 		}
 
 		function _saveUserId(username, userId) {
@@ -998,20 +1027,15 @@ try {
 					function (item, evt) {
 						if ( typeof item !== "undefined" && item !== null ) {
 							if (item.userId !== userId) {
-								//console.log("FixbN Updating {0}'s id in the store: {1}".fex(username, userId));
 								__fixbndb.idStore().put({ "username": username, "userId": userId }, username);
 							
-							//} else {
-								//console.log("FixbN {0}'s id in the store: {1}, already existed. Skipping save.".fex(username, userId));
 							}
 						} else {
-							//console.log("FixbN Adding {0}'s id in the store: {1}".fex(username, userId));
 							__fixbndb.idStore().add({ "username": username, "userId": userId }, username);
 							
 						}
 					},
 					function (error, evt) {
-						//console.log("FixbN Adding {0}'s id in the store: {1}".fex(username, userId));
 						__fixbndb.idStore().add({ "username": username, "userId": userId }, username);
 					}
 				);
@@ -1059,37 +1083,31 @@ var bnurl = (function () {
 
 	function _isHeadlinesPage() {
 		result = (url.path() === "/" || (url.segment().length > 0 && url.segment(0).toLowerCase() === "date" && url.segment().length < 5));
-		//console.log("_isHeadlinesPage: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isHeadlinesByScore() {
 		result = _isHeadlinesPage && url.path() === "/";
-		//console.log("_isHeadlinesByScore: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isHeadlinesByDate() {
 		result = _isHeadlinesPage() && url.segment().length > 0 && url.segment(0).toLowerCase() === "date";
-		//console.log("_isHeadlinesByDate: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isCommentsPage() {
 		result = url.segment().length > 0 && (url.segment(0).toLowerCase() === "comments" || (url.segment(0).toLowerCase() === "date" && url.segment().length >= 5));
-		//console.log("_isCommentsPage: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isCommentsPageTagable() {
 		result = _isCommentsPage() && (url.segment(url.segment.length - 1) !== "1000");
-		//console.log("_isCommentsPageTagable: " + result + " for " + url.toString());
 		return result;
 	}
 
 	function _isQueuePage() {
 		result = url.segment.length > 0 && url.segment(0).toLowerCase() === "queue";
-		//console.log("_isQueuePage: " + result + " for " + url.toString());
 		return result;
 	}
 
