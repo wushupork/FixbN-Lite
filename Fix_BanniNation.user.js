@@ -269,7 +269,11 @@ try {
 							$(brk).remove();
 						}
 					});
-					replies.slideDown();
+					if (replies.children().length > 0) {
+						replies.slideDown();
+					} else {
+						replies.slideUp();
+					}
 					
 				}, 250);
 				
