@@ -1360,22 +1360,25 @@ var bnurl = (function () {
 				}
 			}
 
+			var imgHtml = "<img alt='{title}' title='{title}' {size} />";
+			if (title !== "") {
+				imgHtml = imgHtml.fex({ 'title': title });
+			} else {
+				imgHtml = imgHtml.fex({ 'title': "" });
+			}
+
 			switch (this.settings.imgSize) {
 				case "small":
-					img = $("<img width='58' height='18' />");
+					img = $(imgHtml.fex({ 'size': "width='58' height='18'" }));
 					imgsrc = "http://webmonkees.com/naBBits/" + this.uid + ".gif";
 					break;
 				case "large":
-					img = $("<img width='180' height='18' align='top' border='0' />");
+					img = $(imgHtml.fex({ 'size': "width='180' height='18' align='top' border='0'" }));
 					imgsrc = "http://webmonkees.com/naBBits/m" + this.uid + ".png";
 					break;
 				default:
 			}
 
-			if (title !== "") {
-				img.attr("alt", title);
-				img.attr("title", title);
-			}
 
 			var globalNabbitVisibility = GM_config.get("nabbitVisibility");
 			var userNabbitVisibility = this.config.get("nabbitVisibility");
@@ -1647,9 +1650,10 @@ try {
 				switch (blockImages) {
 					case "Normal":
 						body.find("a.fbnBlockedImage").replaceWith(function () {
-							var unblockedImage = $("<img src='" + $(this).attr("href") + "' />");
-							var height = $(this).data("height");
-							var width = $(this).data("width");
+							var blockedImage = $(this);
+							var unblockedImage = $("<img src='" + blockedImage.attr("href") + "' />");
+							var height = blockedImage.data("height");
+							var width = blockedImage.data("width");
 							if (height) {
 								unblockedImage.attr("height", height).css("height", height);
 							}
@@ -1661,9 +1665,10 @@ try {
 						break;
 					case "Removed":
 						body.find("img").replaceWith(function () {
-							var blockedImageLink = $("<a class='fbnBlockedImage' href='" + $(this).attr("src") + "'>[image blocked]</a>");
-							blockedImageLink.data("width", $(this).attr("width"));
-							blockedImageLink.data("height", $(this).attr("height"));
+							var unBlockedImage = $(this);
+							var blockedImageLink = $("<a class='fbnBlockedImage' href='" + unBlockedImage.attr("src") + "'>[image blocked]</a>");
+							blockedImageLink.data("width", unBlockedImage.attr("width"));
+							blockedImageLink.data("height", unBlockedImage.attr("height"));
 							me.onImageReplaced.fireWith(blockedImageLink, blockedImageLink);
 							return blockedImageLink;
 						});
