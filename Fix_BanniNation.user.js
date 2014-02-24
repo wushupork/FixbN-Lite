@@ -628,6 +628,56 @@ try {
 					/* jshint ignore:end */
 				});
 
+				// intercept comment pastes
+				$('textarea').each(function(){
+					$(this).data("oldVal", $(this).val()).data("editing", false);
+				}).bind('input propertychange', function (evt) {
+					try {
+						var commentBox = $(this);
+
+						var oldVal = commentBox.data("oldVal");
+						var newVal = commentBox.val();
+						commentBox.data("oldVal", newVal);
+
+						if (commentBox.data("editing")) {
+							return;
+						}
+
+						if (newVal.length > oldVal.length) {
+							commentBox.data("editing", true);
+							var change = diff(oldVal, newVal);
+							if (oldVal.indexOf(change) > 0) {
+								return;
+							}
+							var url = new URI(change);
+							if (url.is("url") && url.protocol().indexOf("http") === 0) {
+								var tag = "";
+								
+								switch (url.suffix()) {
+									case "gif":
+									case "jpg":
+									case "jpeg":
+									case "png":
+										tag = "<img src='{0}' />".fex(change);
+										break;
+									default:
+										tag = "<a href='{0}'>{0}</a>".fex(change);
+										break;
+								}
+
+								var parts = newVal.split(change);
+								var result = parts[0] + tag + parts[1];
+								console.log(result);
+								commentBox.val(result);
+							}
+						
+							commentBox.data("editing", false);
+						}
+					} catch (ex) {
+						console.log("FixbN Failed intercepting comment changes", ex);
+					}
+				});
+
 				// any selective reply child quotes have font tags around them, let's style them
 				/* jshint -W014 */
 				$("div.cb font").filter(function () {
@@ -747,7 +797,10 @@ try {
 									$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
 									var originalComment = $("#comment").val();
 									if (originalComment !== "") { originalComment = originalComment + "\n"; }
+									$("#comment").data("editing", true);
 									$("#comment").val(originalComment + cleanHtml + "\n\n").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
+									
+									$("#comment").data("oldVal", $("#comment").val()).data("editing", false)
 								} else {
 									alert("You must log in to comment");
 								}
@@ -2176,6 +2229,27 @@ if ("function" !== typeof "".trim) {
 	String.prototype.trim = function () {
 		return $.trim(this);
 	};
+}
+
+// simple diff that assumes one addition to "n"
+function diff(o, n) {
+	var i = 0;
+	for (i = 0; i < o.length; i++) {
+		if (o[i] !== n[i]) {
+			break;
+		}
+	}
+	o = o.substring(i);
+	n = n.substring(i);
+
+	var l = 0;
+	for (i = 0; i < n.length; i++) {
+		if (n.substring(i) === o) {
+			break;
+		}
+	}
+
+	return n.substring(0, i + 1);
 }
 
 /* jshint ignore:start */
