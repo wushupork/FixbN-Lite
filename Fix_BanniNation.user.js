@@ -648,38 +648,42 @@ try {
 						commentBox.data("oldVal", newVal);
 
 						if (commentBox.data("editing")) {
+							console.log("leaving: editing");
 							return;
 						}
 
 						if (newVal.length > oldVal.length) {
 							commentBox.data("editing", true);
-							var change = diff(oldVal, newVal);
-							if (oldVal.indexOf(change) > 0) {
-								return;
-							}
-							var url = new URI(change);
-							if (url.is("url") && url.protocol().indexOf("http") === 0) {
-								var tag = "";
-								
-								switch (url.suffix()) {
-									case "gif":
-									case "jpg":
-									case "jpeg":
-									case "png":
-										tag = "<img src='{0}' />".fex(change);
-										break;
-									default:
-										tag = "<a href='{0}'>{0}</a>".fex(change);
-										break;
+							try {
+								var change = diff(oldVal, newVal);
+								if (oldVal.indexOf(change) > 0 || change.length <= 1) {
+									return;
 								}
+								var url = new URI(change);
+								if (url.is("url") && url.protocol().indexOf("http") === 0) {
+									var tag = "";
 
-								var parts = newVal.split(change);
-								var result = parts[0] + tag + parts[1];
-								console.log(result);
-								commentBox.val(result);
+									switch (url.suffix()) {
+										case "gif":
+										case "jpg":
+										case "jpeg":
+										case "png":
+											tag = "<img src='{0}' />".fex(change);
+											break;
+										default:
+											tag = "<a href='{0}'>{0}</a>".fex(change);
+											break;
+									}
+
+									var parts = newVal.split(change);
+									var result = parts[0] + tag + parts[1];
+									commentBox.val(result);
+								}
+							} catch (ex) {
+								console.error(ex);
+							} finally {
+								commentBox.data("editing", false);
 							}
-						
-							commentBox.data("editing", false);
 						}
 					} catch (ex) {
 						console.log("FixbN Failed intercepting comment changes", ex);
@@ -801,14 +805,21 @@ try {
 
 						switch (event.target.id) {
 							case "selectionMenuQuote":
-								if ($("#comment").length) {
+								var commentBox = $("#comment");
+								if (commentBox.length) {
 									$("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
-									var originalComment = $("#comment").val();
+									var originalComment = commentBox.val();
 									if (originalComment !== "") { originalComment = originalComment + "\n"; }
-									$("#comment").data("editing", true);
-									$("#comment").val(originalComment + cleanHtml + "\n\n").focus().scrollTop($("#comment")[0].scrollHeight).caret(-1);
-									
-									$("#comment").data("oldVal", $("#comment").val()).data("editing", false)
+									try {
+										commentBox.data("editing", true);
+										commentBox.val(originalComment + cleanHtml + "\n\n").focus().scrollTop(commentBox[0].scrollHeight).caret(-1);
+										commentBox.data("oldVal", commentBox.val());
+									} catch (ex) {
+										console.error(ex);
+									} finally {
+										commentBox.data("editing", false);
+										console.log("set editing to " + commentBox.data("editing"));
+									}
 								} else {
 									alert("You must log in to comment");
 								}
