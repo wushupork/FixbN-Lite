@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Fix BanniNation
 // @description	fixes up various parts of the bn ui
-// @version		19
+// @version		19.1
 // @downloadURL	https://userscripts.org/scripts/source/36110.user.js
 // @updateURL	https://userscripts.org/scripts/source/36110.meta.js
 // @namespace	http://www.bannination.com/fixbn
@@ -107,6 +107,11 @@ try {
 							'label': "Mark Posts With Scores Over:",
 							'type': 'int',
 							'default': '4'
+						},
+						'autoLinkComments': {
+							'label': "Auto-linkify pasted URLs",
+							'type': 'checkbox',
+							'default': false
 						}
 					},
 					'frame': mainConfigFrame
@@ -632,6 +637,9 @@ try {
 				$('textarea').each(function(){
 					$(this).data("oldVal", $(this).val()).data("editing", false);
 				}).bind('input propertychange', function (evt) {
+					if (!GM_config.get("autoLinkComments")) {
+						return;
+					}
 					try {
 						var commentBox = $(this);
 
