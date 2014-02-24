@@ -51,6 +51,7 @@ try {
 				this.fixAllPages = $bind(this.fixAllPages, this);
 				this.fixHeadlinesPages = $bind(this.fixHeadlinesPages, this);
 				this.fixCommentsPage = $bind(this.fixCommentsPage, this);
+				this.fixQueuePage = $bind(this.fixQueuePage, this);
 				this.fixTaggers = $bind(this.fixTaggers, this);
 				this.createDateUrl = $bind(this.createDateUrl, this);
 
@@ -163,6 +164,12 @@ try {
 					this.fixCommentsPage();
 				} catch (ex) {
 					console.error("FixbN failed the Comments page fixup", ex);
+				}
+
+				try {
+					this.fixQueuePage();
+				} catch (ex) {
+					console.error("FixbN failed the Queue page fixup", ex);
 				}
 
 				try {
@@ -800,6 +807,14 @@ try {
 				} else {
 					$("div.reply").hide();
 				}
+			};
+
+			FixbN.prototype.fixQueuePage = function () {
+				if (!bnurl.isQueuePage()) {
+					return;
+				}
+
+				$("input.submitform[name='headline']").attr("maxlength", "254");
 			};
 
 			FixbN.prototype.fixTaggers = function () {
