@@ -2890,7 +2890,6 @@ $(document).ready(function () {
 			"div[id$='_wrapper'] .section_desc { background: #EFEFEF; border: 1px solid #CCC; color: #575757; font-size: 9pt; margin: 0 0 6px; }",
 
 			"div[id$='_wrapper'] div[id$='_buttons_holder'] { position:absolute; bottom:0px; right:0px; left:0px; color: #000; text-align: right; padding-right:0.5em; padding-bottom:0.5em; }",
-			"div[id$='_wrapper'] div.reset_holder { position:absolute; bottom:0px; left:0px; margin:1.5em; }",
 			"div[id$='_wrapper'] div.saveclose_buttons { margin:0em 2em 2em 0em; }",
 			"div[id$='_wrapper'] button[id$='_saveBtn'] { font-weight:bold; }",
 			"div[id$='_wrapper'] button[id$='_closeBtn'] { font-weight:bold; }"
