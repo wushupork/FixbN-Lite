@@ -826,9 +826,8 @@ try {
 								break;
 							case "selectionMenuTag":
 								if (GM_config.get("stickyTagger")) {
-									var stickyTaggerLabel = $("div.stickyTagger label");
 									var stickyTaggerInput = $("div.stickyTagger input");
-									stickyTaggerLabel.click();
+									stickyTaggerInput.show(250);
 									stickyTaggerInput.val(text);
 								} else {
 									alert("Enable the Floating Tagger in options to use selection tagging.");
