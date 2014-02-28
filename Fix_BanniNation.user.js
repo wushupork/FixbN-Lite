@@ -392,22 +392,26 @@ try {
 										}
 									}
 
-									if (replyNoty === null) {
-										replyNoty = new noty({
-											layout: 'topCenter',
-											text: mbnRepliesHtml.join(" <span class='notyReplyDivider'> | </span> "),
-											type: "information",
-											timeout: false,
-											force: true,
-											callback: {
-												onClose: function (theNoty) {
-													$.ajax("/post?action=clear_notifcations", { dataType: "text", global: false });
+									if (mbnRepliesHtml.length > 0) {
+										if (replyNoty === null) {
+											replyNoty = new noty({
+												layout: 'topCenter',
+												text: mbnRepliesHtml.join(" <span class='notyReplyDivider'> | </span> "),
+												type: "information",
+												timeout: false,
+												force: true,
+												callback: {
+													onClose: function (theNoty) {
+														replyNoty = null;
+														$.ajax("/post?action=clear_notifcations", { dataType: "text", global: false });
+													}
 												}
-											}
-										});
-									} else {
-										replyNoty.text = mbnRepliesHtml.join(" <span class='notyReplyDivider'> | </span> ");
+											});
+										} else {
+											replyNoty.text = mbnRepliesHtml.join(" <span class='notyReplyDivider'> | </span> ");
+										}
 									}
+
 								} catch (ex) {
 									console.error("FixbN Failed creating noty for masterbn replies", ex);
 								}
