@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Fix BanniNation
 // @description	fixes up various parts of the bn ui
-// @version		19.2
+// @version		19.3
 // @downloadURL	https://userscripts.org/scripts/source/36110.user.js
 // @updateURL	https://userscripts.org/scripts/source/36110.meta.js
 // @namespace	http://www.bannination.com/fixbn
@@ -398,7 +398,7 @@ try {
 											force: true,
 											callback: {
 												onClose: function (theNoty) {
-													window.location.href = "/post?action=clear_notifcations";
+													$.ajax("/post?action=clear_notifcations", { dataType: "text", global: false });
 												}
 											}
 										});
@@ -3046,4 +3046,4 @@ $(document).ready(function () {
 	__fixbn.fix();
 
 });
-console.info("Fix bN v" + GM_info.version);
+console.info("Fix bN v" + GM_info.script.version);
