@@ -151,7 +151,7 @@ try {
 
 				try {
 					var firstMenuItem = $("div#menu ul:first li:first");
-					$("<li><span title='Fix bN Version {0}' style='text-decoration:underline;cursor:pointer;'>fix bN</span></li>".fex(GM_info.version))
+					$("<li><span title='Fix bN Version {0}' style='text-decoration:underline;cursor:pointer;'>fix bN</span></li>".fex(GM_info.script.version))
 						.insertAfter(firstMenuItem)
 						.click(function () { GM_config.open(); })
 						.attr("title", "Settings for the Fix bN addon");
@@ -337,8 +337,8 @@ try {
 				if (GM_config.get("repliesOveride")) {
 					$("div#replies").hide().data("replies", $("div#replies").html());
 					var replyNoty = null;
-					var mbnReplies = null;
 					window.setInterval(function () {
+						var mbnReplies = null;
 						try {
 							var replies = $("div#replies");
 							if (replies.html() === replies.data("replies")) {
@@ -346,7 +346,6 @@ try {
 							}
 							replies.data("replies", replies.html());
 							mbnReplies = [];
-							var mbnRepliesConfigs = {};
 							var mbnRepliesConfigsPromises = [];
 							replies.contents().filter(function () {
 								return this.nodeType === 3; //Node.TEXT_NODE
@@ -366,11 +365,7 @@ try {
 												url: link.attr("href"),
 												threadTitle: link.text()
 											});
-										var promise = __userConfig.getConfigPromise(rplyUsername, null);
-										promise.done(function (config) {
-											mbnRepliesConfigs[config.bnUsername] = config;
-										});
-										mbnRepliesConfigsPromises.push(promise);
+										mbnRepliesConfigsPromises.push(__userConfig.getConfigPromise(rplyUsername, null));
 									}
 								} catch (ex) {
 									console.error("FixbN Failed creating masterbn reply info", ex);
@@ -380,12 +375,20 @@ try {
 
 							$.when.apply(this, mbnRepliesConfigsPromises).then(function () {
 								try {
+									var mbnConfigs = {};
+									for (var x = 0; x < arguments.length; x++) {
+										var replierConfig = arguments[x];
+										mbnConfigs[replierConfig.bnUsername] = replierConfig;
+										replierConfig.onSave.callbacks.add(function () {
+											$("div#replies").data("replies", "force refresh");
+										});
+									}
+
 									var mbnRepliesHtml = [];
 									for (var i = 0; i < mbnReplies.length; i++) {
 										var replyInfo = mbnReplies[i];
-										if (mbnRepliesConfigs[replyInfo.username].get("visibility") !== "Ignore") {
-											mbnRepliesHtml.push("<span class='notyReply'><a href='{url}' title='{threadTitle}'>{username}</a></span>"
-											.fex(replyInfo));
+										if (mbnConfigs[replyInfo.username].get("visibility") !== "Ignore") {
+											mbnRepliesHtml.push("<span class='notyReply'><a href='{url}' title='{threadTitle}'>{username}</a></span>".fex(replyInfo));
 										}
 									}
 
@@ -415,7 +418,7 @@ try {
 							console.error("FixbN Failed masterbn reply override", ex);
 						}
 
-					}, 250);
+					}, 500);
 				}
 				
 			};
