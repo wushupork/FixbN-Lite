@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Fix BanniNation
 // @description	fixes up various parts of the bn ui
-// @version		19.3
+// @version		20
 // @downloadURL	https://userscripts.org/scripts/source/36110.user.js
 // @updateURL	https://userscripts.org/scripts/source/36110.meta.js
 // @namespace	http://www.bannination.com/fixbn
