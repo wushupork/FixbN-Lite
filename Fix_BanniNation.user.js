@@ -302,9 +302,7 @@ try {
 
 						var recentCommentWrapper = $("<div class='recentCommentWrapper' style='clear:both;margin-top:5px;' />");
 						recentCommentWrapper.appendTo(profilePopup);
-						$("<span style='text-decoration:underline;cursor:pointer;'>Recent Comments...</span>").click(
-						function (event) {
-							var me = $(this);
+						var loadComments = function (){
 							var userPageUrl = profileLink.attr("href");
 							$.ajax({
 								url: userPageUrl,
@@ -320,14 +318,15 @@ try {
 										of: $("div#menu"),
 										collision: "none"
 									});
-
+									recentCommentWrapper.find("h2").css({"cursor": "pointer"}).click(loadComments);
 								},
 								error: function () {
 									window.location.href = userPageUrl;
 								}
 							});
 
-						}).appendTo(recentCommentWrapper);
+						};
+						loadComments();
 					}
 				} catch (ex) {
 					console.error("FixbN Failed consolidating profile links", ex);
