@@ -287,6 +287,7 @@ try {
 										of: $("div#menu"),
 										collision: "fit"
 									});
+								loadComments();
 								}
 							} catch (ex) {
 								console.error(ex);
@@ -326,7 +327,6 @@ try {
 							});
 
 						};
-						loadComments();
 					}
 				} catch (ex) {
 					console.error("FixbN Failed consolidating profile links", ex);
