@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name		Fix BanniNation
+// @name		Fix BanniNation (Lite)
 // @description	fixes up various parts of the bn ui
-// @version		20
+// @version		1
 // @downloadURL	https://userscripts.org/scripts/source/36110.user.js
 // @updateURL	https://userscripts.org/scripts/source/36110.meta.js
 // @namespace	http://www.bannination.com/fixbn
@@ -579,7 +579,7 @@ try {
 				$.fn.sunlight.defaults.handler = function (sunlight) {
 					this.attr("title", sunlight.blame).text("score (" + sunlight.cool + "|" + sunlight.uncool + ")");
 					this.closest("div.ch").data("score", parseInt(sunlight.cool) - parseInt(sunlight.uncool));
-					this.closest("div.ch").find("span.uid").userDecoration("update");
+					//this.closest("div.ch").find("span.uid").userDecoration("update");
 				};
 				$.fn.sunlight.defaults.threadId = threadId;
 
@@ -631,7 +631,7 @@ try {
 				/* jshint -W064 */
 				GM_addStyle("div.cb a[href^='/comments/{0}'] { color:black; }".fex(threadId));
 				/* jshint +W064 */
-
+/*
 				// add user decoration to userid span
 				$("div.ch span.uid").userDecoration({
 					'threadId': threadId,
@@ -639,7 +639,7 @@ try {
 						$(this).magnificPopup({ type: 'image', verticalFit: true, closeOnContentClick: true, showCloseBtn: false });
 					}
 				});
-
+*/
 				// html comment editor
 				$('textarea').markItUp({
 					/* jshint ignore:start */
@@ -851,6 +851,7 @@ try {
 						var repliesToMeList = $("<ul></ul>");
 						var repliesToMe = $("<div class='fbnRepliesToMe'><span class='label'>Replies To Me</span><span class='replyToMeListHolder' /></div>");
 						repliesToMe.find("span.replyToMeListHolder").append(repliesToMeList);
+						/*
 						var visibleCommentLinks = $("div.cb:visible:not(.fbnIgnored) a[href^='#'], div.cb:visible:not(.fbnIgnored) a[href^='/comments']");
 						visibleCommentLinks.filter(function () {
 							return $(this).text() === myUserName;
@@ -860,6 +861,7 @@ try {
 								repliesToMeList.append("<li><a href='#{0}'>{1}</a></li>".fex(replyToMeHeader.attr("id").substring(1), replyToMeHeader.data("uname")));
 							}
 						});
+						*/
 						if (repliesToMeList.find("li").length > 0) {
 							repliesToMe.insertAfter($("div#main h1").first());
 							repliesToMeList.parent().hide();
@@ -1093,7 +1095,7 @@ try {
 } catch (ex) {
 	console.error("FixbN Failed declaring __fixbn", ex);
 }
-
+/*
 // user config class
 var __userConfig = null;
 try {
@@ -1169,20 +1171,6 @@ try {
 				'title': 'Fix bN Settings for User: {0}'.fex(configKey),
 				'fields':
 				{
-					'visibility':
-					{
-						'label': 'User Comment Visibility',
-						'type': 'radio',
-						'options': ['Normal', 'Ignore'],
-						'default': 'Normal'
-					},
-					'ignoreReplies':
-					{
-						'label': 'User Being Quoted Visibility',
-						'type': 'radio',
-						'options': ['Shown', 'Default', 'Hidden'],
-						'default': 'Default'
-					},
 					'blockImages':
 					{
 						'label': 'User Comment Image Visibility',
@@ -1196,12 +1184,6 @@ try {
 						'type': 'radio',
 						'options': ['Shown', 'Default', 'Hidden'],
 						'default': 'Default'
-					},
-					'overrideIgnoreReplies':
-					{
-						'label': "Show This User's Replies to Ignored Users",
-						'type': 'checkbox',
-						'default': false
 					},
 					'headColor':
 					{
@@ -1326,7 +1308,7 @@ try {
 } catch (ex) {
 	console.error("FixbN Failed declaring __fixbndb", ex);
 }
-
+*/
 // bannination.com url tests
 var bnurl = (function () {
 
@@ -1618,7 +1600,7 @@ var bnurl = (function () {
 	};
 
 })(jQuery);
-
+/*
 // bN User Decoration jquery plugin
 try {
 	(function ($) {
@@ -1664,14 +1646,6 @@ try {
 				this.userName = header.data("uname");
 				var body = $("div.cb.u" + this.userId + "[id$='" + header.attr("id").substring(1) + "']");
 			
-				var peep = $("<span class='peep' >ಠ_ಠ</span>");
-				peep.click( $bind(function () {
-					this.$el.closest("div.ch").removeClass("fbnIgnored");
-					var body = $("div.cb.u" + this.userId + "[id$='" + header.attr("id").substring(1) + "']");
-					body.slideDown('fast').removeClass("fbnIgnored");
-				}, this));
-				header.prepend(peep);
-
 				var me = this;
 
 				// Get the configs for every quoted user and create a promise array from them
@@ -1759,8 +1733,7 @@ try {
 					.find("a").css("color", this.userConfig.get("headColor"))
 				;
 
-				// quote style and ignored reply visibility
-				var visibility = this.userConfig.get("visibility");
+				// quote style
 
 				var threadId = $("form input[name='storyid']").val();
 				var quoteLinks = body.find("a[href^='#'], a[href^='/comments/{0}']".fex(threadId));
@@ -1779,66 +1752,10 @@ try {
 						// styling quotes
 						link.css({ "background-color": quotedConfig.get("headBackColor"), "color": quotedConfig.get("headColor") });
 
-						// ignoring replies as needed
-						try {
-
-							var replyVisibile = true;
-
-							// first only bother checking if the quoted user is on ignore at all
-							var quoteIgnore = (quotedConfig.get("visibility") === "Ignore");
-							if (quoteIgnore) {
-								
-
-								// since they are on Ignore, then determine if they have a reply override on them
-								var gIgnore = GM_config.get("ignoreReplies");
-								var uIgnore = quotedConfig.get("ignoreReplies");
-
-								switch (uIgnore) {
-									case "Shown":
-										quoteIgnore = false;
-										break;
-									case "Hidden":
-										quoteIgnore = true;
-										break;
-									default:
-										quoteIgnore = gIgnore;
-										break;
-								}
-
-								if (quoteIgnore) {
-									//ok, this person is set to be reply-ignored, but prefered user settings can override that
-
-									if (!(me.userConfig.get("overrideIgnoreReplies"))) {
-
-										// BAM! Ignored Reply!
-										replyVisibile = false;
-
-									}
-
-								}
-
-							}
-							visibility = ( visibility === "Normal" ) && replyVisibile ? "Normal" : "Ignore";
-
-						} catch (ex) {
-							console.error("FixbN Failed determining quoted user's visibility", ex);
-						}
-
 					} catch (ex) {
 						console.error(ex);
 					}
 				});
-
-				switch (visibility) {
-					case 'Normal':
-						body.filter(".fbnIgnored").slideDown('fast').removeClass("fbnIgnored");
-						header.removeClass("fbnIgnored");
-						break;
-					case 'Ignore':
-						body.filter(":visible").addClass("fbnIgnored").slideUp('fast');
-						header.addClass("fbnIgnored");
-						break;
-				}
 
 			};
 
@@ -1889,7 +1806,7 @@ try {
 } catch (ex) {
 	console.error("FixbN Failed declaring UserDecoration", ex);
 }
-
+*/
 // bN taggination replacement
 (function ($) {
 	"use strict";
@@ -2112,156 +2029,6 @@ try {
 
 })(jQuery);
 
-// bitcoin donate jquery plugin
-try {
-	(function ($) {
-		"use strict";
-
-		var $bind = function (fn, me) { return function () { return fn.apply(me, arguments); }; };
-		var root = "https://blockchain.info/";
-
-		var Bitcoin = (function () {
-
-			// @constructor
-			function Bitcoin($el, settings) {
-				if (settings === null) {
-					settings = {};
-				}
-
-				this.attach = $bind(this.attach, this);
-
-				this.$el = $el;
-				this.settings = $.extend({}, $.fn.tagn.defaults, settings);
-
-				this.attach();
-			}
-
-			Bitcoin.prototype.attach = function () {
-				var button = this.$el;
-
-				button.find(".blockchain").hide();
-				button.find('.stage-begin').trigger('show').show();
-
-				button.click(function () {
-					var receivers_address = $(this).data('address');
-					var shared = $(this).data('shared');
-					var test = $(this).data('test');
-
-					if (!shared) { shared = false; }
-
-					var callback_url = $(this).data('callback');
-					if (!callback_url) { callback_url = ''; }
-
-					button.find('.blockchain').hide();
-					button.find('.stage-loading').trigger('show').show();
-
-					$.ajax({
-						type: "GET",
-						dataType: 'json',
-						url: root + 'api/receive',
-						data: { method: 'create', address: encodeURIComponent(receivers_address), shared: shared, callback: callback_url },
-						success: function (response) {
-							button.find('.qr-code').empty();
-							button.find('.blockchain').hide();
-
-							if (!response || !response.input_address) {
-								button.find('.stage-error').trigger('show').show().html(button.find('.stage-error').html().replace('[[error]]', 'Unknown Error'));
-								return;
-							}
-
-							function checkBalance() {
-								$.ajax({
-									type: "GET",
-									url: root + 'q/getreceivedbyaddress/' + response.input_address,
-									data: { format: 'plain' },
-									success: function (response) {
-										if (!response) { return; }
-
-										var value = parseInt(response);
-
-										if (value > 0 || test) {
-											button.find('.blockchain').hide();
-											button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', value / 100000000));
-										} else {
-											setTimeout(checkBalance, 5000);
-										}
-									}
-								});
-							}
-
-							try {
-								var ws = new WebSocket('ws://ws.blockchain.info/inv');
-								if (!ws) { return; }
-
-								ws.onmessage = function (msg) {
-									try {
-										var obj = $.parseJSON(msg.data);
-										var result = 0;
-
-										if (obj.op == 'utx') {
-											var tx = obj.x;
-																				
-											for (var i = 0; i < tx.out.length; i++) {
-												var output = tx.out[i];
-
-												if (output.addr == response.input_address) {
-													result += parseInt(output.value);
-												}
-											}
-										}
-
-										button.find('.blockchain').hide();
-										button.find('.stage-paid').trigger('show').show().html(button.find('.stage-paid').html().replace('[[value]]', result / 100000000));
-
-										ws.close();
-									} catch (ex) {
-										console.error(ex);
-										console.error(ex.data);
-									}
-								};
-
-								ws.onopen = function () {
-									ws.send('{"op":"addr_sub", "addr":"' + response.input_address + '"}');
-								};
-							} catch (ex) {
-								console.error(ex);
-							}
-
-							button.find('.stage-ready').trigger('show').show().html(button.find('.stage-ready').html().replace('[[address]]', response.input_address));
-							button.find('.qr-code').html('<img style="margin:5px" src="' + root + 'qr?data=' + response.input_address + '&size=125">');
-							button.unbind();
-
-							///Check for incoming payment
-							setTimeout(checkBalance, 5000);
-						},
-						error: function (ex) {
-							button.find('.blockchain').hide();
-							button.find('.stage-error').show().trigger('show').html(button.find('.stage-error').html().replace('[[error]]', ex.responseText));
-						}
-					});
-
-				});
-			};
-
-			return Bitcoin;
-		})();
-
-		$.fn.extend({
-			bitcoin: function (options) {
-				if (options === null) {
-					options = {};
-				}
-				return this.each(function () {
-					return new Bitcoin($(this), options);
-				});
-			}
-		});
-
-	})(jQuery);
-} catch (ex) {
-	console.error("FixbN Failed declaring bitcoin", ex);
-}
-
 /*
 string format function
 attached to the string prototype
@@ -2354,6 +2121,7 @@ function diff(o, n) {
 }
 
 /* jshint ignore:start */
+/*
 try {
 	(function ($, undefined) {
 		'use strict';
@@ -2370,7 +2138,7 @@ try {
 		/**
 		 * Best to use the constant IDBTransaction since older version support numeric types while the latest spec
 		 * supports strings
-		 */
+		 *
 		var IDBTransaction = window.IDBTransaction || window.webkitIDBTransaction;
 
 		function getDefaultTransaction(mode) {
@@ -2393,7 +2161,7 @@ try {
 			 * The IndexedDB object used to open databases
 			 * @param {Object} dbName - name of the database
 			 * @param {Object} config - version, onupgradeneeded, onversionchange, schema
-			 */
+			 *
 			"indexedDB": function (dbName, config) {
 				if (config) {
 					// Parse the config argument
@@ -2880,6 +2648,7 @@ try {
 } catch (ex) {
 	console.error("FixbN Failed Declaring indexedDB", ex);
 }
+*/
 /* jshint ignore:end */
 
 // The kickoff function
@@ -2929,8 +2698,8 @@ $(document).ready(function () {
 			"div.ch.highScore { padding-left: 25px; background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADBElEQVRYhb1XTUhUURT+MAxd1MaNlAgthELNpSi4kMqioNzM0n5AQRjn3ceIBAqmCaUJibgQkVYSirgTiWhICBlBcGW4iUQyzUBU3sxznOk5XwvzzvsZmXnPxgN3c9895/ve+c497zzgDMYASqig7CwxvAI3UGCVKjSq0CiwRgWPzo+AGdxE4nzAVdRI0N7SKF/fiJqI1JwHgR4JONd5yLnOQxOBntwTEFiSgGsLBtcWDJMMK7kFD6BEgnUVRXhkkEcG+eJqRO77UZ47AgqaJdBEU4wnNuOPmWQI5o6Aii8SaHkyIQmsfvhjkmEpN+ABXJYgHQUa49GkJGDEya6ilAwBlLgHUNFIgVkK7DjuuH2NPzyg3SaaYhn9BHYoMEsVjVZwgf6MzuYVHks4CCxPJlzFUDF4DK6gzKWjxr2NIweBxAHZUeAuThuugwKP5cZUS4xG3BH7v5kRJ6dbU1IpeObMwFC1zv3NZOZoLk3bTnK4VndkIG0NdBdHuLZg/Dfw9UWD3cURmwSD1kJU0GQ50J6vcXHcWWxuLTyWYHu+Xf+n6a+ignoKbFgOT7d6qwsjTk612K/mFhXUZ2o4VRSYtzgO1+rUtrOvi/3NJIeqrXoLzDOAKjeNadASYKAimjWBgYqoDbw/a2CbJOk/PpnM3BUVNHsCBwAKhNJ+fDKZuSsKhLyB+3BBBgnmadR3nTVwMg/YTd9NMpiXksCHi17e/q4MMFKnO0D2N5McqdM5VK1zd93Zmkfv6KYs+LwQeCsDhAas9/DbZ2tjeX4p4pAoPJYw1cE7LwRSo/evr6k3/NgXt6TXvN4/ick5YW/jyPTspztwP8qlc29pVOo69uDABvqdAmHLXt+1KH8sHRfGm5veRnbL9Zvxx7i+aLC31H63Q2xDJQBQxUvLs2Cexk+v4raRPftZkQrqpePovQNHLxdQ0vjcp4rflnPmadlVBnwoPGWI2GIADaf6taHS0jtShN3/L1CB32svZwC3KbByAk4Ft1wTAP5lQkE9fSj05N+GK5nO/AVe5nuxyXFg6QAAAABJRU5ErkJggg==); background-repeat: no-repeat; background-attachment: scroll; background-position:left center;  }",
 			"div.ch img.nabbitOff { opacity: 0; }",
 			"div.ch img.nabbitForceOn { opacity: 1; }",
-			"div.ch span.peep { display: none; float: left; }",
-			"div.ch.fbnIgnored span.peep { display: inline; float: left; cursor:pointer; font-weight:bold; padding: 0px 0.5em 0px 0.5em; margin: 0.25em 0px 0.5em 0px; }",
+			//"div.ch span.peep { display: none; float: left; }",
+			//"div.ch.fbnIgnored span.peep { display: inline; float: left; cursor:pointer; font-weight:bold; padding: 0px 0.5em 0px 0.5em; margin: 0.25em 0px 0.5em 0px; }",
 			"div.cb ul, div.cb pre { padding:0px; margin:0px; } div.cb li { padding:0px; margin:0px 0px 0px 1em; }",
 			"div.cb .commentquote { display: block; padding:0px 0px 0px 0.5em; margin:1em 0px 0px 0.5em; border-left: 2px solid #807373; font-size: 0.75em; }",
 			"div.cb a[href^='#'] { color:black; }",
